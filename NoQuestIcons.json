@@ -1,0 +1,20 @@
+{
+  "Author": "Grimmortal Dread",
+  "Name": "No Quest Icons",
+  "InternalName": "NoQuestIcons",
+  "AssemblyVersion": "1.0.0.0",
+  "Description": "Hides quest icons above NPCs in Final Fantasy XIV.",
+  "ApplicableVersion": "any",
+  "Tags": [
+    "quest",
+    "icons",
+    "ui"
+  ],
+  "DalamudApiLevel": 13,
+  "LoadRequiredState": 0,
+  "LoadSync": false,
+  "CanUnloadAsync": false,
+  "LoadPriority": 0,
+  "Punchline": "Removes annoying quest icons above NPCs",
+  "AcceptsFeedback": true
+}
