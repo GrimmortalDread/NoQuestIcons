@@ -1,26 +1,17 @@
 [
   {
-    "Author": "Grimmortal Dread",
-    "Name": "No Quest Icons",
+    "Author": "GrimmortalDread",
+    "Name": "NoQuestIcons",
+    "Punchline": "Hide quest icons you don’t care about.",
+    "Description": "Removes distracting quest markers from the game’s UI.",
     "InternalName": "NoQuestIcons",
-    "AssemblyVersion": "1.0.0.0",
-    "Description": "Hides quest icons above NPCs in Final Fantasy XIV.",
-    "ApplicableVersion": "any",
-    "Tags": [
-      "quest",
-      "icons",
-      "ui"
-    ],
-    "DalamudApiLevel": 13,
-    "LoadRequiredState": 0,
-    "LoadSync": false,
-    "CanUnloadAsync": false,
-    "LoadPriority": 0,
-    "Punchline": "Removes annoying quest icons above NPCs",
-    "AcceptsFeedback": true,
+    "AssemblyVersion": "1.2.2",
     "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
-    "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/images/HQIcon.png",
-    "DownloadLinkInstall": "https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.zip",
-    "DownloadLinkUpdate": "https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.zip"
+    "DownloadLinkInstall": "https://github.com/GrimmortalDread/NoQuestIcons/releases/download/v1.2.2/NoQuestIcons.dll",
+    "DownloadLinkUpdate": "https://github.com/GrimmortalDread/NoQuestIcons/releases/download/v1.2.2/NoQuestIcons.dll",
+    "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/icon.png",
+    "Tags": [ "UI", "QoL" ],
+    "CategoryTags": [ "UI" ],
+    "ApplicableVersion": "any"
   }
 ]
