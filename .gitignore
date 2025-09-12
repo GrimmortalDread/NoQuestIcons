@@ -5,6 +5,10 @@ publish/
 *.dll
 *.exe
 *.pdb
+*.json
+
+#except pluginmaster.json 
+!pluginmaster.json
 
 # User-specific files
 *.user
