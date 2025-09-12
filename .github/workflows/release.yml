@@ -1,29 +1,34 @@
-name: Build and Draft Release
+﻿name: Build and Draft Release
 
 on:
   push:
     tags:
       - "v*.*.*"
 
+permissions:
+  contents: write   # 🔑 allows creating/updating releases
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 LTS
+      - name: Setup .NET 8 (LTS) Runtime
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
+          dotnet-quality: "ga"
 
-      - name: Setup .NET 9
+      - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
+          dotnet-quality: "ga"
 
-      - name: Install Dalamud
+      - name: Prepare Dalamud
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
@@ -38,22 +43,21 @@ jobs:
       - name: Build project
         run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
-      - name: Publish artifact
+      - name: Package plugin
         run: |
           mkdir -p output
-          cp bin/Release/*.dll output/
-          cp NoQuestIcons.json output/
-          # Optional: include these if you want them in the release zip
-          cp README.md output/ || true
-          cp LICENSE output/ || true
-          cp pluginmaster.json output/ || true
-          cp images/HQIcon.png output/ || true
-          cd output
-          zip -r ../NoQuestIcons-${{ github.ref_name }}.zip .
-          cd ..
+          cp -r bin/Release/net*/ output/
 
-      - name: Draft GitHub Release
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoQuestIcons
+          path: output/**
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: NoQuestIcons-${{ github.ref_name }}.zip
+          files: output/**/*.dll
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
