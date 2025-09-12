@@ -18,16 +18,18 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      # Create expected Dalamud folder path so the SDK doesn't crash
-      - name: Create expected Dalamud folder
-        run: mkdir $HOME\.xlcore\dalamud\Hooks\dev
-        shell: pwsh
+      # Create dummy Dalamud install at the exact path SDK expects
+      - name: Prepare dummy Dalamud installation
+        shell: bash
+        run: |
+          mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
+          echo "dummy" > $HOME/.xlcore/dalamud/Hooks/dev/Dalamud.exe
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build plugin
-        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCheck=true /p:DalamudPath=${{ github.workspace }}\.dalamud
+        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCheck=true
 
       - name: Package plugin
         run: |
@@ -40,7 +42,7 @@ jobs:
         id: changelog
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}" # e.g. v1.0.2
+          $version = "${{ github.ref_name }}" # e.g. v1.0.3
           $lines = Get-Content CHANGELOG.md
           $start = ($lines | Select-String "## \[$version\]").LineNumber
           $next = ($lines | Select-String "## \[" | Where-Object { $_.LineNumber -gt $start } | Select-Object -First 1).LineNumber
