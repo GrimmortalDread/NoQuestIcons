@@ -18,14 +18,25 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      # Install Dalamud exactly where the SDK checks
-      - name: Download Dalamud runtime
+      - name: Download and unpack Dalamud runtime
         run: |
           curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
           unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
-          echo "Checking for Dalamud.dll..."
-          find $HOME/.xlcore/dalamud/Hooks/dev -name Dalamud.dll
+          echo "----- Folder structure after unzip -----"
+          ls -R $HOME/.xlcore/dalamud/Hooks/dev
+
+          # If Dalamud.dll is nested deeper, move it up
+          DLL_PATH=$(find $HOME/.xlcore/dalamud/Hooks/dev -name Dalamud.dll | head -n 1 || true)
+          if [ -n "$DLL_PATH" ]; then
+            echo "Found Dalamud.dll at: $DLL_PATH"
+            cp -u "$DLL_PATH" $HOME/.xlcore/dalamud/Hooks/dev/
+          else
+            echo "ERROR: Dalamud.dll not found in extracted zip"
+          fi
+
+          echo "----- Final Hooks/dev contents -----"
+          ls -l $HOME/.xlcore/dalamud/Hooks/dev
 
       - name: Restore dependencies
         run: dotnet restore
@@ -46,15 +57,3 @@ jobs:
           name: NoQuestIcons-zip
           path: NoQuestIcons.zip
           if-no-files-found: error
-
-      - name: Create GitHub Release Draft
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: "Automated release for ${{ github.ref_name }}"
-          draft: true
-          files: |
-            NoQuestIcons.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
