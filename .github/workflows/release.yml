@@ -3,7 +3,7 @@ name: Build and Draft Release
 on:
   push:
     tags:
-      - "v*.*.*" # triggers when you push tags like v1.0.4
+      - "v*.*.*"
 
 jobs:
   build:
@@ -18,22 +18,23 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      # Create dummy Dalamud install at the exact path SDK checks
-      - name: Prepare dummy Dalamud installation
+      # Download the latest Dalamud runtime
+      - name: Download Dalamud runtime
         run: |
-          mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
-          echo "dummy" > $HOME/.xlcore/dalamud/Hooks/dev/Dalamud.exe
+          mkdir -p $HOME/.xlcore/dalamud
+          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
+          unzip -q dalamud.zip -d $HOME/.xlcore/dalamud
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build plugin
-        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCheck=true
+        run: dotnet build --configuration Release --no-restore
 
       - name: Package plugin
         run: |
           mkdir package
-          cp src/bin/Release/net9.0/NoQuestIcons.dll package/
+          cp src/bin/Release/net9.0*/NoQuestIcons.dll package/
           cp NoQuestIcons.json package/
           zip -j NoQuestIcons.zip package/*
 
