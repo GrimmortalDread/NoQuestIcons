@@ -9,7 +9,7 @@
     "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
     "DownloadLinkInstall": "https://github.com/GrimmortalDread/NoQuestIcons/releases/download/v1.2.2/NoQuestIcons.dll",
     "DownloadLinkUpdate": "https://github.com/GrimmortalDread/NoQuestIcons/releases/download/v1.2.2/NoQuestIcons.dll",
-    "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/images/NQI.png",
+    "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/images/icon.png",
     "Tags": [ "UI", "QoL" ],
     "CategoryTags": [ "UI" ],
     "ApplicableVersion": "any"
