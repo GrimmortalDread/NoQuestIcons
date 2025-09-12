@@ -1,8 +1,10 @@
 ﻿<Project Sdk="Dalamud.NET.Sdk/13.1.0">
 	<PropertyGroup>
 		<TargetFramework>net9.0-windows</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Version>1.0.0</Version>
+		<Platforms>x64</Platforms>
+
+		<!-- 👇 Critical flags -->
+		<DalamudSkipCopy>true</DalamudSkipCopy>
+		<DalamudLibPath>.</DalamudLibPath>
 	</PropertyGroup>
 </Project>
