@@ -13,18 +13,21 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      # 1) Checkout the tagged commit (default)
+      - name: Checkout (tag)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup .NET (LTS runtime + 9.0 SDK)
+      # 2) Setup .NET (LTS runtime + SDK 9)
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             8.0.x
             9.0.x
 
+      # 3) Install Dalamud dev libs so the SDK can resolve references
       - name: Install Dalamud dev libs
         shell: bash
         run: |
@@ -35,56 +38,58 @@ jobs:
           unzip -o dalamud.zip -d "$HOME/.xlcore/dalamud/Hooks/dev" >/dev/null
           echo ">> Installed Dalamud dev libs to $HOME/.xlcore/dalamud/Hooks/dev"
 
+      # 4) Restore and build (override Version from git tag)
       - name: Restore
         run: dotnet restore NoQuestIcons.csproj
 
-      - name: Build
+      - name: Build (from tag)
         env:
-          # strip the leading 'v' from the tag (e.g., v1.2.9 -> 1.2.9)
-          VERSION: ${{ github.ref_name }}
+          VERSION: ${{ github.ref_name }}   # e.g. v1.2.3
         run: |
-          VER="${VERSION#v}"
+          VER="${VERSION#v}"                # -> 1.2.3
           echo "Building version: $VER"
           dotnet build NoQuestIcons.csproj \
             --configuration Release \
-            -p:Version="$VER" \
-            --no-restore
+            --no-restore \
+            -p:Version="$VER"
 
-      - name: Show build tree (for debugging)
+      # 5) Show tree for quick debugging if needed
+      - name: Show build tree
         run: |
-          echo "== Project root =="
-          ls -la
           echo "== bin/Release =="
           ls -la bin/Release || true
 
-      - name: Package outputs
+      # 6) Package release assets (DLL/PDB + patched pluginmaster.json)
+      - name: Package assets
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          VER="${VERSION#v}"
+          TAG="v${VER}"
           mkdir -p output
 
-          # Copy from the ACTUAL output folder your SDK produces (no net* folder)
+          # SDK produces these at bin/Release (no net* folder)
           cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll"
-
-          # Optional: include PDB for symbolicated logs
           if [ -f "bin/Release/NoQuestIcons.pdb" ]; then
             cp "bin/Release/NoQuestIcons.pdb" "output/NoQuestIcons.pdb"
           fi
 
-          # If you still ship an external plugin json, include it (not required with SDK)
-          if [ -f "NoQuestIcons.json" ]; then
-            cp "NoQuestIcons.json" "output/NoQuestIcons.json"
-          fi
+          # Patch a copy of pluginmaster.json for the release assets
+          cp pluginmaster.json output/pluginmaster.json
 
-          # Build the zip
-          ZIP_NAME="NoQuestIcons-${{ github.ref_name }}.zip"
-          (cd output && zip -r "$ZIP_NAME" .)
+          sed -i "s|\"AssemblyVersion\": *\"[^\"]*\"|\"AssemblyVersion\": \"${VER}\"|" output/pluginmaster.json
+          sed -i "s|\"DownloadLinkInstall\": *\"[^\"]*\"|\"DownloadLinkInstall\": \"https://github.com/${{ github.repository }}/releases/download/${TAG}/NoQuestIcons.dll\"|" output/pluginmaster.json
+          sed -i "s|\"DownloadLinkUpdate\": *\"[^\"]*\"|\"DownloadLinkUpdate\": \"https://github.com/${{ github.repository }}/releases/download/${TAG}/NoQuestIcons.dll\"|" output/pluginmaster.json
 
-      - name: Upload artifact (CI archive)
-        uses: actions/upload-artifact@v4
-        with:
-          name: NoQuestIcons-${{ github.ref_name }}
-          path: output/*
+          echo "Patched pluginmaster.json (release asset):"
+          cat output/pluginmaster.json
 
+          # Optional zip
+          (cd output && zip -r "NoQuestIcons-${TAG}.zip" .)
+
+      # 7) Attach assets to the GitHub Release for this tag
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -96,6 +101,44 @@ jobs:
           files: |
             output/NoQuestIcons.dll
             output/NoQuestIcons.pdb
+            output/pluginmaster.json
             output/NoQuestIcons-${{ github.ref_name }}.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 8) Also update pluginmaster.json on main so your repo URL always serves latest metadata
+      - name: Checkout main for pluginmaster update
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          path: repo_main
+
+      - name: Patch pluginmaster.json on main and push
+        shell: bash
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          VER="${VERSION#v}"
+          TAG="v${VER}"
+          cd repo_main
+
+          # Patch repo copy
+          sed -i "s|\"AssemblyVersion\": *\"[^\"]*\"|\"AssemblyVersion\": \"${VER}\"|" pluginmaster.json
+          sed -i "s|\"DownloadLinkInstall\": *\"[^\"]*\"|\"DownloadLinkInstall\": \"https://github.com/${{ github.repository }}/releases/download/${TAG}/NoQuestIcons.dll\"|" pluginmaster.json
+          sed -i "s|\"DownloadLinkUpdate\": *\"[^\"]*\"|\"DownloadLinkUpdate\": \"https://github.com/${{ github.repository }}/releases/download/${TAG}/NoQuestIcons.dll\"|" pluginmaster.json
+
+          echo "Patched pluginmaster.json (repo main):"
+          cat pluginmaster.json
+
+          # Commit only if changed
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add pluginmaster.json
+            git commit -m "chore: update pluginmaster.json for ${TAG}"
+            git push origin main
+          else
+            echo "No changes to commit on main."
+          fi
