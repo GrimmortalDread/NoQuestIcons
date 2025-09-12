@@ -7,6 +7,9 @@ publish/
 *.pdb
 *.json
 
+# Ignore NuGet package lock file
+packages.lock.json
+
 #except pluginmaster.json 
 !pluginmaster.json
 
