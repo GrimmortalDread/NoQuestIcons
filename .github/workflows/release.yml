@@ -3,46 +3,56 @@ name: Build and Draft Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - 'v*'
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup .NET 9.0
+      - name: Setup .NET 8 LTS runtime
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          dotnet-quality: 'ga'
+
+      - name: Setup .NET 9 SDK
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
+          dotnet-quality: 'ga'
 
-      - name: Download and install Dalamud runtime
+      - name: Install Dalamud devkit
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
           curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
-          unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+          unzip -o dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
           echo "----- Final Hooks/dev tree -----"
-          find $HOME/.xlcore/dalamud/Hooks/dev -maxdepth 2 -type f
+          ls -R $HOME/.xlcore/dalamud/Hooks/dev
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore NoQuestIcons.csproj
 
-      - name: Build plugin
-        run: dotnet build NoQuestIcons/NoQuestIcons.csproj --configuration Release --no-restore
+      - name: Build project
+        run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
-      - name: Package plugin
+      - name: Publish artifact
         run: |
-          mkdir package
-          cp NoQuestIcons/bin/Release/net9.0*/NoQuestIcons.dll package/
-          cp NoQuestIcons.json package/
-          zip -j NoQuestIcons.zip package/*
+          mkdir -p output
+          cp bin/Release/net*/*.dll output/
+          cp NoQuestIcons.json output/
+          cd output
+          zip -r ../NoQuestIcons.zip .
+          cd ..
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+      - name: Create Draft Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: NoQuestIcons-zip
-          path: NoQuestIcons.zip
-          if-no-files-found: error
+          files: NoQuestIcons.zip
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
