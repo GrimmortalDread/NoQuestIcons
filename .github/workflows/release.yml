@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # needed to create a release and upload assets
+  contents: write
 
 jobs:
   build:
@@ -36,19 +36,17 @@ jobs:
           curl -sSL https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           unzip -o dalamud.zip -d "$HOME/.xlcore/dalamud/Hooks/dev"
           echo ">> Installed Dalamud dev libs to $HOME/.xlcore/dalamud/Hooks/dev"
-          ls -la "$HOME/.xlcore/dalamud/Hooks/dev" | head -n 50
+          # Avoid pipeline SIGPIPE breaking the job:
+          ls -la "$HOME/.xlcore/dalamud/Hooks/dev" | head -n 50 || true
 
       - name: Restore
         run: dotnet restore NoQuestIcons.csproj
 
       - name: Build (force output path)
-        run: |
-          dotnet build NoQuestIcons.csproj \
-            --configuration Release \
-            --no-restore \
-            -p:OutDir=${{ github.workspace }}/output/
-          echo ">> Output contents:"
-          ls -la ${{ github.workspace }}/output/
+        run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore -p:OutDir=${{ github.workspace }}/output/
+
+      - name: Show output
+        run: ls -la ${{ github.workspace }}/output/
 
       - name: Verify artifact exists
         shell: bash
@@ -57,6 +55,7 @@ jobs:
           test -f "${{ github.workspace }}/output/NoQuestIcons.dll" || { echo "NoQuestIcons.dll not found in output/"; exit 1; }
 
       - name: Draft GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           draft: true
