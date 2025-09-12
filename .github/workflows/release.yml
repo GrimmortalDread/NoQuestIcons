@@ -3,59 +3,125 @@ name: Build and Draft Release
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*.*.*"   # runs when you push a tag like v1.0.2
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+
+    env:
+      # Point any SDK/env lookups to the same place we install Dalamud
+      DALAMUD_HOME: ${{ github.workspace }}\.xlcore\dalamud
+      DALAMUD_RUNTIME_PATH: ${{ github.workspace }}\.xlcore\dalamud\Hooks\dev
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-      - name: Setup .NET 9.0
-        uses: actions/setup-dotnet@v3
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '9.0.x'
 
-      # Download and install Dalamud to the path SDK checks
-      - name: Download Dalamud runtime
+      # --- Install Dalamud dev runtime exactly where the Sdk checks ---
+      - name: Download Dalamud dev runtime (Windows)
+        shell: pwsh
         run: |
-          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
-          mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
-          unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+          $dev = Join-Path $env:GITHUB_WORKSPACE ".xlcore\dalamud\Hooks\dev"
+          New-Item -ItemType Directory -Force -Path $dev | Out-Null
+          $zip = Join-Path $env:RUNNER_TEMP "dalamud-dev.zip"
+          Invoke-WebRequest -Uri https://goatcorp.github.io/dalamud-distrib/latest.zip -OutFile $zip
+          Expand-Archive -Path $zip -DestinationPath $dev -Force
+          Write-Host "Dalamud dev installed to: $dev"
+          Get-ChildItem -Recurse $dev | Select-Object FullName
 
-      - name: Restore dependencies
-        run: dotnet restore
-
-      - name: Build plugin
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Package plugin
+      # --- Sanity check: fail early if Dalamud.dll not present ---
+      - name: Verify Dalamud install
+        shell: pwsh
         run: |
-          mkdir package
-          cp src/bin/Release/net9.0*/NoQuestIcons.dll package/
-          cp NoQuestIcons.json package/
-          zip -j NoQuestIcons.zip package/*
+          $dev = "$env:DALAMUD_RUNTIME_PATH"
+          $dll = Get-ChildItem -Recurse -Filter "Dalamud.dll" -Path $dev -ErrorAction SilentlyContinue
+          if (-not $dll) {
+            Write-Error "Dalamud.dll not found under $dev. The SDK will fail without it."
+          } else {
+            Write-Host "Found Dalamud.dll at:" $dll.FullName
+          }
 
-      - name: Extract changelog for this version
+      - name: Restore
+        shell: pwsh
+        run: dotnet restore "NoQuestIcons/NoQuestIcons.csproj"
+
+      - name: Build (Release)
+        shell: pwsh
+        run: dotnet build "NoQuestIcons/NoQuestIcons.csproj" --configuration Release --no-restore
+
+      # --- Package the plugin into NoQuestIcons.zip ---
+      - name: Package
+        shell: pwsh
+        run: |
+          $outDir = Join-Path $env:GITHUB_WORKSPACE "out"
+          New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+          # Find the newest built DLL (handles tfm variations like net9.0-windows)
+          $dll = Get-ChildItem -Recurse -Path "NoQuestIcons\bin\Release" -Filter "NoQuestIcons.dll" |
+                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
+
+          if (-not $dll) { Write-Error "Built DLL not found under NoQuestIcons\bin\Release"; }
+
+          Copy-Item $dll.FullName -Destination $outDir
+
+          # Copy manifest (adjust path if your json is elsewhere)
+          if (Test-Path "NoQuestIcons.json") {
+            Copy-Item "NoQuestIcons.json" -Destination $outDir
+          } elseif (Test-Path "NoQuestIcons\NoQuestIcons.json") {
+            Copy-Item "NoQuestIcons\NoQuestIcons.json" -Destination $outDir
+          } else {
+            Write-Error "NoQuestIcons.json not found at repo root or project folder."
+          }
+
+          $zip = Join-Path $env:GITHUB_WORKSPACE "NoQuestIcons.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "$outDir\*" -DestinationPath $zip
+          Write-Host "Packaged -> $zip"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoQuestIcons-zip
+          path: NoQuestIcons.zip
+          if-no-files-found: error
+
+      # Optional: pull the section for this tag from CHANGELOG.md if it exists
+      - name: Extract changelog for this tag
         id: changelog
+        shell: pwsh
+        continue-on-error: true
         run: |
-          version="${GITHUB_REF_NAME}" # e.g. v1.0.6
-          start=$(grep -n "## \[$version\]" CHANGELOG.md | cut -d: -f1)
-          if [ -z "$start" ]; then
-            echo "content=No changelog entry for $version" >> $GITHUB_OUTPUT
+          $tag = "${{ github.ref_name }}"   # e.g., v1.0.2
+          if (-not (Test-Path "CHANGELOG.md")) {
+            Write-Host "No CHANGELOG.md found."
+            echo "content=Release $tag" >> $env:GITHUB_OUTPUT
             exit 0
-          fi
-          next=$(grep -n "## \[" CHANGELOG.md | awk -F: -v s=$start '$1 > s {print $1; exit}')
-          if [ -z "$next" ]; then next=$(wc -l < CHANGELOG.md); fi
-          content=$(sed -n "${start},$((next-1))p" CHANGELOG.md)
-          echo "content<<EOF" >> $GITHUB_OUTPUT
-          echo "$content" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          }
+          $lines = Get-Content "CHANGELOG.md"
+          $start = ($lines | Select-String -Pattern "## \[$tag\]" -SimpleMatch).LineNumber
+          if (-not $start) {
+            echo "content=Release $tag" >> $env:GITHUB_OUTPUT
+            exit 0
+          }
+          $next = ($lines | Select-String -Pattern "^## \[" | Where-Object { $_.LineNumber -gt $start } | Select-Object -First 1).LineNumber
+          if (-not $next) { $next = $lines.Length + 1 }
+          $content = $lines[($start-1)..($next-2)] -join "`n"
+          # Escape EOF block
+          $outfile = @"
+content<<EOF
+$content
+EOF
+"@
+          $outfile | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
-      - name: Create GitHub Release Draft
-        uses: softprops/action-gh-release@v1
+      - name: Create GitHub Release (draft)
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
