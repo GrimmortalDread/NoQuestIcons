@@ -5,6 +5,9 @@ on:
     tags:
       - "v*"
 
+permissions:
+  contents: write   # 👈 needed for creating releases with GITHUB_TOKEN
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -13,48 +16,50 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 LTS
+      # Install .NET runtimes & SDKs
+      - name: Setup .NET 8 (LTS)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: 8.0.x
 
-      - name: Setup .NET 9
+      - name: Setup .NET 9 (Latest)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: 9.0.x
 
-      - name: Setup Dalamud runtime
+      # Install Dalamud runtime
+      - name: Setup Dalamud
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
           curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           unzip -o dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+          echo "----- Dalamud installed -----"
           ls -R $HOME/.xlcore/dalamud/Hooks/dev
 
+      # Restore dependencies
       - name: Restore dependencies
         run: dotnet restore NoQuestIcons.csproj
 
+      # Build plugin
       - name: Build project
         run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
+      # Package build outputs
       - name: Package plugin
         run: |
           mkdir -p output
           cp bin/Release/net*/NoQuestIcons.dll output/ || true
           cp bin/Release/net*/NoQuestIcons.pdb output/ || true
-          cp NoQuestIcons.json output/
-          cp pluginmaster.json output/
+          cp NoQuestIcons.json output/ || true
+          echo "Output folder contents:"
           ls -R output
 
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: NoQuestIcons
-          path: output/*
-
+      # Create GitHub release
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: output/*
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer PAT if set, fallback to GITHUB_TOKEN
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
