@@ -18,17 +18,16 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Create dummy Dalamud folder
-        run: mkdir $env:GITHUB_WORKSPACE\.dalamud\Hooks\dev
+      # Create expected Dalamud folder path so the SDK doesn't crash
+      - name: Create expected Dalamud folder
+        run: mkdir $HOME\.xlcore\dalamud\Hooks\dev
         shell: pwsh
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build plugin
-        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCheck=true
-        env:
-          DALAMUD_HOME: ${{ github.workspace }}\.dalamud
+        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCheck=true /p:DalamudPath=${{ github.workspace }}\.dalamud
 
       - name: Package plugin
         run: |
