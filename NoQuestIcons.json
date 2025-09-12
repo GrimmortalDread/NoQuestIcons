@@ -3,7 +3,7 @@
   "Name": "No Quest Icons",
   "InternalName": "NoQuestIcons",
   "AssemblyVersion": "1.0.0.0",
-  "Description": "Hides quest icons above NPCs in Final Fantasy XIV.",
+  "Description": "Removes quest icons from the UI.",
   "ApplicableVersion": "any",
   "Tags": [
     "quest",
@@ -15,6 +15,6 @@
   "LoadSync": false,
   "CanUnloadAsync": false,
   "LoadPriority": 0,
-  "Punchline": "Removes annoying quest icons above NPCs",
+  "Punchline": "Removes quest icons above NPCs for better immersion!",
   "AcceptsFeedback": true
 }
