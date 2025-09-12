@@ -1,9 +1,9 @@
 [
   {
     "Author": "GrimmortalDread",
-    "Name": "NoQuestIcons",
-    "Punchline": "Hide quest icons you don’t care about.",
-    "Description": "Removes distracting quest markers from the game’s UI.",
+    "Name": "No Quest Icons",
+    "Punchline": "Removes quest icons from the UI for better immersion!.",
+    "Description": "Hides quest icons above npcs heads.",
     "InternalName": "NoQuestIcons",
     "AssemblyVersion": "0.0.0",
     "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
