@@ -28,17 +28,17 @@ jobs:
           unzip -o dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
 
       - name: Restore
-        run: dotnet restore NoQuestIcons.csproj
+        run: dotnet restore NoQuestIcons/NoQuestIcons.csproj
 
       - name: Build
-        run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
+        run: dotnet build NoQuestIcons/NoQuestIcons.csproj --configuration Release --no-restore
 
       - name: Package
         run: |
           mkdir -p output
-          cp bin/Release/net*/NoQuestIcons.dll output/
-          cp bin/Release/net*/NoQuestIcons.pdb output/ || true
-          cp NoQuestIcons.json output/
+          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.dll output/
+          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.pdb output/ || true
+          cp NoQuestIcons/NoQuestIcons.json output/
           cd output
           zip NoQuestIcons.zip NoQuestIcons.dll NoQuestIcons.pdb NoQuestIcons.json
 
