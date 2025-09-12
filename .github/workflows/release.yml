@@ -18,11 +18,18 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      # Download and install Dalamud to the path SDK checks
+      - name: Download Dalamud runtime
+        run: |
+          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
+          mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
+          unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build plugin (skip Dalamud check)
-        run: dotnet build --configuration Release --no-restore -p:SkipDalamudInstall=true
+      - name: Build plugin
+        run: dotnet build --configuration Release --no-restore
 
       - name: Package plugin
         run: |
@@ -34,7 +41,7 @@ jobs:
       - name: Extract changelog for this version
         id: changelog
         run: |
-          version="${GITHUB_REF_NAME}" # e.g. v1.0.5
+          version="${GITHUB_REF_NAME}" # e.g. v1.0.6
           start=$(grep -n "## \[$version\]" CHANGELOG.md | cut -d: -f1)
           if [ -z "$start" ]; then
             echo "content=No changelog entry for $version" >> $GITHUB_OUTPUT
