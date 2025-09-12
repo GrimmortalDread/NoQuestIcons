@@ -1,13 +1,13 @@
-name: Test .NET 9.0 Workflow
+name: Build and Draft Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - "v*.*.*" # triggers only on version tags like v1.0.2
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
@@ -18,11 +18,12 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      # Create dummy Dalamud folder to satisfy Dalamud.NET.Sdk
+      - name: Create dummy Dalamud folder
+        run: mkdir -p ${{ github.workspace }}/.dalamud/Hooks/dev
+
       - name: Restore dependencies
         run: dotnet restore
 
-      - name: Build project
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Test workflow
-        run: echo "✅ GitHub Actions is working with .NET 9.0!"
+      - name: Build plugin
+        run: dotnet build --configuration Release --no-restore -p:DisableDalamudLibCh
