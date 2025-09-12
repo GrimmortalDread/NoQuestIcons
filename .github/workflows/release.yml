@@ -3,7 +3,7 @@
 on:
   push:
     tags:
-      - "v*.*.*"
+      - "v*"
 
 jobs:
   build:
@@ -13,17 +13,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET (LTS)
+      # Install .NET 8 LTS runtime + SDK
+      - name: Setup .NET 8 LTS
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 8.0.x
+          dotnet-version: "8.0.x"
 
+      # Install .NET 9 SDK (for latest C# / SDK features)
       - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 9.0.x
+          dotnet-version: "9.0.x"
 
-      - name: Setup Dalamud environment
+      # Prepare Dalamud runtime (required by Dalamud.NET.Sdk)
+      - name: Setup Dalamud runtime
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
@@ -32,31 +35,37 @@ jobs:
           echo "----- Final Hooks/dev tree -----"
           ls -R $HOME/.xlcore/dalamud/Hooks/dev
 
+      # Restore dependencies
       - name: Restore dependencies
         run: dotnet restore NoQuestIcons.csproj
 
+      # Build project
       - name: Build project
         run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
+      # Package DLL + PDB + manifests
       - name: Package plugin
         run: |
           mkdir -p output
-          # Try modern target frameworks, fallback to net472
-          cp bin/Release/net*/NoQuestIcons.dll output/ 2>/dev/null || cp bin/Release/net472/NoQuestIcons.dll output/
-          cp NoQuestIcons.json output/
-          cp pluginmaster.json output/
+          # Copy DLL + PDB (debug symbols) from any target framework
+          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.dll output/ || true
+          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.pdb output/ || true
+          # Copy manifest files
+          cp NoQuestIcons/NoQuestIcons.json output/
+          cp NoQuestIcons/pluginmaster.json output/
+          ls -R output
 
-      - name: Upload artifact
+      # Upload artifact (so you can download from Actions if needed)
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: NoQuestIcons
           path: output/*
 
+      # Create GitHub Release with packaged files
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
-          generate_release_notes: true
           files: output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
