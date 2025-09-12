@@ -18,12 +18,20 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
+      # Install Dalamud exactly where the SDK checks
+      - name: Download Dalamud runtime
+        run: |
+          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
+          mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
+          unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+          echo "Checking for Dalamud.dll..."
+          find $HOME/.xlcore/dalamud/Hooks/dev -name Dalamud.dll
+
       - name: Restore dependencies
         run: dotnet restore
 
-      # 👇 Key fix: skip Dalamud runtime validation
       - name: Build plugin
-        run: dotnet build NoQuestIcons/NoQuestIcons.csproj --configuration Release --no-restore -p:DisableDalamudLibCheck=true
+        run: dotnet build NoQuestIcons/NoQuestIcons.csproj --configuration Release --no-restore
 
       - name: Package plugin
         run: |
@@ -39,32 +47,12 @@ jobs:
           path: NoQuestIcons.zip
           if-no-files-found: error
 
-      - name: Extract changelog for this version
-        id: changelog
-        run: |
-          version="${GITHUB_REF_NAME}" # e.g. v1.0.7
-          if [ ! -f CHANGELOG.md ]; then
-            echo "content=Release $version" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          start=$(grep -n "## \[$version\]" CHANGELOG.md | cut -d: -f1)
-          if [ -z "$start" ]; then
-            echo "content=Release $version" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-          next=$(grep -n "## \[" CHANGELOG.md | awk -F: -v s=$start '$1 > s {print $1; exit}')
-          if [ -z "$next" ]; then next=$(wc -l < CHANGELOG.md); fi
-          content=$(sed -n "${start},$((next-1))p" CHANGELOG.md)
-          echo "content<<EOF" >> $GITHUB_OUTPUT
-          echo "$content" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
       - name: Create GitHub Release Draft
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
-          body: ${{ steps.changelog.outputs.content }}
+          body: "Automated release for ${{ github.ref_name }}"
           draft: true
           files: |
             NoQuestIcons.zip
