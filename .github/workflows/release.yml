@@ -13,11 +13,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Ensure UTF-8 without BOM
+      - name: Normalize file encoding (UTF-8 without BOM)
         run: |
-          echo "Normalizing YAML encoding..."
-          iconv -f utf-8 -t utf-8 -c .github/workflows/release.yml > tmp.yml
-          mv tmp.yml .github/workflows/release.yml
+          echo "Normalizing all source files to UTF-8 without BOM..."
+          find . -type f \( -name "*.cs" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.txt" \) \
+            -exec sh -c 'iconv -f utf-8 -t utf-8 -c "$1" > "$1.tmp" && mv "$1.tmp" "$1"' sh {} \;
 
       - name: Set up .NET 8 LTS
         uses: actions/setup-dotnet@v4
