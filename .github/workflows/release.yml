@@ -1,10 +1,9 @@
-﻿name: Build and Draft Release
+﻿name: Build and Release
 
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - "v*"
 
 permissions:
   contents: write
@@ -18,7 +17,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: true
 
       - name: Setup .NET (LTS runtime + 9.0 SDK)
         uses: actions/setup-dotnet@v4
@@ -27,39 +25,77 @@ jobs:
             8.0.x
             9.0.x
 
-      - name: Install Dalamud dev libraries
+      - name: Install Dalamud dev libs
         shell: bash
         run: |
           set -euo pipefail
           rm -rf "$HOME/.xlcore"
           mkdir -p "$HOME/.xlcore/dalamud/Hooks/dev"
-          curl -sSL https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
-          unzip -o dalamud.zip -d "$HOME/.xlcore/dalamud/Hooks/dev"
+          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
+          unzip -o dalamud.zip -d "$HOME/.xlcore/dalamud/Hooks/dev" >/dev/null
           echo ">> Installed Dalamud dev libs to $HOME/.xlcore/dalamud/Hooks/dev"
-          # Avoid pipeline SIGPIPE breaking the job:
-          ls -la "$HOME/.xlcore/dalamud/Hooks/dev" | head -n 50 || true
 
       - name: Restore
         run: dotnet restore NoQuestIcons.csproj
 
-      - name: Build (force output path)
-        run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore -p:OutDir=${{ github.workspace }}/output/
-
-      - name: Show output
-        run: ls -la ${{ github.workspace }}/output/
-
-      - name: Verify artifact exists
-        shell: bash
+      - name: Build
+        env:
+          # strip the leading 'v' from the tag (e.g., v1.2.9 -> 1.2.9)
+          VERSION: ${{ github.ref_name }}
         run: |
-          set -e
-          test -f "${{ github.workspace }}/output/NoQuestIcons.dll" || { echo "NoQuestIcons.dll not found in output/"; exit 1; }
+          VER="${VERSION#v}"
+          echo "Building version: $VER"
+          dotnet build NoQuestIcons.csproj \
+            --configuration Release \
+            -p:Version="$VER" \
+            --no-restore
 
-      - name: Draft GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Show build tree (for debugging)
+        run: |
+          echo "== Project root =="
+          ls -la
+          echo "== bin/Release =="
+          ls -la bin/Release || true
+
+      - name: Package outputs
+        run: |
+          set -euo pipefail
+          mkdir -p output
+
+          # Copy from the ACTUAL output folder your SDK produces (no net* folder)
+          cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll"
+
+          # Optional: include PDB for symbolicated logs
+          if [ -f "bin/Release/NoQuestIcons.pdb" ]; then
+            cp "bin/Release/NoQuestIcons.pdb" "output/NoQuestIcons.pdb"
+          fi
+
+          # If you still ship an external plugin json, include it (not required with SDK)
+          if [ -f "NoQuestIcons.json" ]; then
+            cp "NoQuestIcons.json" "output/NoQuestIcons.json"
+          fi
+
+          # Build the zip
+          ZIP_NAME="NoQuestIcons-${{ github.ref_name }}.zip"
+          (cd output && zip -r "$ZIP_NAME" .)
+
+      - name: Upload artifact (CI archive)
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoQuestIcons-${{ github.ref_name }}
+          path: output/*
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
           tag_name: ${{ github.ref_name }}
+          name: NoQuestIcons ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
           files: |
             output/NoQuestIcons.dll
-          generate_release_notes: true
+            output/NoQuestIcons.pdb
+            output/NoQuestIcons-${{ github.ref_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
