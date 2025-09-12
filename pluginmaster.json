@@ -2,7 +2,7 @@
   {
     "Author": "GrimmortalDread",
     "Name": "NoQuestIcons",
-    "Punchline": "Hide quest icons you don’t care about.",
+    "Punchline": "Hides every NPC quest icon from the UI for better immersion.",
     "Description": "Removes distracting quest markers from the game’s UI.",
     "InternalName": "NoQuestIcons",
     "AssemblyVersion": "1.2.2",
