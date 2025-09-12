@@ -1,0 +1,51 @@
+name: Build and Draft Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*" # Runs whenever you push a version tag, e.g. v1.0.0
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: "7.0.x"
+
+      - name: Build plugin
+        run: dotnet build -c Release
+
+      - name: Package plugin
+        run: |
+          mkdir package
+          copy bin/Release/net7.0-windows/NoQuestIcons.dll package/
+          copy NoQuestIcons.json package/
+          powershell Compress-Archive -Path package/* -DestinationPath NoQuestIcons.zip
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          $version = "${{ github.ref_name }}" # e.g. v1.0.0
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String "## \[$version\]").LineNumber
+          $next = ($lines | Select-String "## \[" | Where-Object { $_.LineNumber -gt $start } | Select-Object -First 1).LineNumber
+          if ($null -eq $next) { $next = $lines.Length + 1 }
+          $section = $lines[($start-1)..($next-2)]
+          $text = $section -join "`n"
+          echo "content=$text" >> $env:GITHUB_OUTPUT
+
+      - name: Create GitHub Release Draft
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.content }}
+          draft: true
+          files: |
+            NoQuestIcons.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
