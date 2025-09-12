@@ -3,10 +3,7 @@
 on:
   push:
     tags:
-      - "v*.*.*"
-
-permissions:
-  contents: write   # 🔑 allows creating/updating releases
+      - "v*"
 
 jobs:
   build:
@@ -16,19 +13,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 (LTS) Runtime
+      - name: Ensure UTF-8 without BOM
+        run: |
+          echo "Normalizing YAML encoding..."
+          iconv -f utf-8 -t utf-8 -c .github/workflows/release.yml > tmp.yml
+          mv tmp.yml .github/workflows/release.yml
+
+      - name: Set up .NET 8 LTS
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "8.0.x"
-          dotnet-quality: "ga"
 
-      - name: Setup .NET 9 SDK
+      - name: Set up .NET 9
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "9.0.x"
-          dotnet-quality: "ga"
 
-      - name: Prepare Dalamud
+      - name: Install Dalamud
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
@@ -43,21 +44,23 @@ jobs:
       - name: Build project
         run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
-      - name: Package plugin
+      - name: Prepare output
         run: |
           mkdir -p output
-          cp -r bin/Release/net*/ output/
+          cp bin/Release/net*/NoQuestIcons.dll output/
+          cp NoQuestIcons.json output/
+          cp pluginmaster.json output/
 
-      - name: Upload build artifacts
+      - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: NoQuestIcons
-          path: output/**
+          path: output/*
 
-      - name: Create GitHub Release
+      - name: Draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
-          files: output/**/*.dll
+          files: output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
