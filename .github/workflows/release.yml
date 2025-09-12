@@ -1,16 +1,16 @@
-﻿name: Build and Release
+﻿name: Release
 
 on:
   push:
     tags:
-      - 'v*.*.*'   # runs when you push a version tag like v1.2.3
+      - "v*.*.*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Setup .NET
@@ -20,33 +20,39 @@ jobs:
             8.0.x
             9.0.x
 
-      - name: Setup Dalamud SDK
+      - name: Install Dalamud
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
           curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           unzip -o dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
+          echo "----- Final Hooks/dev tree -----"
+          ls -R $HOME/.xlcore/dalamud/Hooks/dev
 
-      - name: Restore
-        run: dotnet restore NoQuestIcons/NoQuestIcons.csproj
+      - name: Restore dependencies
+        run: dotnet restore NoQuestIcons.csproj
 
-      - name: Build
-        run: dotnet build NoQuestIcons/NoQuestIcons.csproj --configuration Release --no-restore
+      - name: Build project
+        run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
-      - name: Package
+      - name: Package plugin
         run: |
           mkdir -p output
-          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.dll output/
-          cp NoQuestIcons/bin/Release/net*/NoQuestIcons.pdb output/ || true
-          cp NoQuestIcons/NoQuestIcons.json output/
-          cd output
-          zip NoQuestIcons.zip NoQuestIcons.dll NoQuestIcons.pdb NoQuestIcons.json
+          cp bin/Release/net*/NoQuestIcons.dll output/
+          cp bin/Release/net*/NoQuestIcons.pdb output/
+          cp NoQuestIcons.json output/
+          cp pluginmaster.json output/
+          ls -R output
 
-      - name: Upload Release Assets
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NoQuestIcons
+          path: output/*
+
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            output/NoQuestIcons.dll
-            output/NoQuestIcons.zip
+          files: output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
