@@ -3,29 +3,27 @@ name: Build and Draft Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*.*.*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 8 LTS runtime
+      - name: Setup .NET 8 LTS
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-          dotnet-quality: 'ga'
+          dotnet-version: "8.0.x"
 
-      - name: Setup .NET 9 SDK
+      - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x'
-          dotnet-quality: 'ga'
+          dotnet-version: "9.0.x"
 
-      - name: Install Dalamud devkit
+      - name: Install Dalamud
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
@@ -43,16 +41,19 @@ jobs:
       - name: Publish artifact
         run: |
           mkdir -p output
-          cp bin/Release/net*/*.dll output/
+          cp bin/Release/*.dll output/
           cp NoQuestIcons.json output/
+          # Optional: include these if you want them in the release zip
+          cp README.md output/ || true
+          cp LICENSE output/ || true
+          cp pluginmaster.json output/ || true
+          cp images/HQIcon.png output/ || true
           cd output
-          zip -r ../NoQuestIcons.zip .
+          zip -r ../NoQuestIcons-${{ github.ref_name }}.zip .
           cd ..
 
-      - name: Create Draft Release
+      - name: Draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: NoQuestIcons.zip
           draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          files: NoQuestIcons-${{ github.ref_name }}.zip
