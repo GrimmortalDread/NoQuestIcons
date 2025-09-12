@@ -22,7 +22,7 @@ jobs:
         run: dotnet restore
 
       - name: Build plugin (skip Dalamud check)
-        run: dotnet build --configuration Release --no-restore -p:DisableDalamudBuild=true
+        run: dotnet build --configuration Release --no-restore -p:SkipDalamudInstall=true
 
       - name: Package plugin
         run: |
