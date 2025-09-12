@@ -18,25 +18,14 @@ jobs:
         with:
           dotnet-version: '9.0.x'
 
-      - name: Download and unpack Dalamud runtime
+      - name: Download and install Dalamud runtime
         run: |
-          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
+          rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
+          curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           unzip -q dalamud.zip -d $HOME/.xlcore/dalamud/Hooks/dev
-          echo "----- Folder structure after unzip -----"
-          ls -R $HOME/.xlcore/dalamud/Hooks/dev
-
-          # If Dalamud.dll is nested deeper, move it up
-          DLL_PATH=$(find $HOME/.xlcore/dalamud/Hooks/dev -name Dalamud.dll | head -n 1 || true)
-          if [ -n "$DLL_PATH" ]; then
-            echo "Found Dalamud.dll at: $DLL_PATH"
-            cp -u "$DLL_PATH" $HOME/.xlcore/dalamud/Hooks/dev/
-          else
-            echo "ERROR: Dalamud.dll not found in extracted zip"
-          fi
-
-          echo "----- Final Hooks/dev contents -----"
-          ls -l $HOME/.xlcore/dalamud/Hooks/dev
+          echo "----- Final Hooks/dev tree -----"
+          find $HOME/.xlcore/dalamud/Hooks/dev -maxdepth 2 -type f
 
       - name: Restore dependencies
         run: dotnet restore
