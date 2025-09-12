@@ -3,7 +3,7 @@
 on:
   push:
     tags:
-      - "v*"
+      - "v*.*.*"
 
 jobs:
   build:
@@ -13,23 +13,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Normalize file encoding (UTF-8 without BOM)
-        run: |
-          echo "Normalizing all source files to UTF-8 without BOM..."
-          find . -type f \( -name "*.cs" -o -name "*.json" -o -name "*.yml" -o -name "*.yaml" -o -name "*.md" -o -name "*.txt" \) \
-            -exec sh -c 'iconv -f utf-8 -t utf-8 -c "$1" > "$1.tmp" && mv "$1.tmp" "$1"' sh {} \;
-
-      - name: Set up .NET 8 LTS
+      - name: Setup .NET (LTS)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: 8.0.x
 
-      - name: Set up .NET 9
+      - name: Setup .NET 9
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: "9.0.x"
+          dotnet-version: 9.0.x
 
-      - name: Install Dalamud
+      - name: Setup Dalamud environment
         run: |
           rm -rf $HOME/.xlcore
           mkdir -p $HOME/.xlcore/dalamud/Hooks/dev
@@ -44,23 +38,25 @@ jobs:
       - name: Build project
         run: dotnet build NoQuestIcons.csproj --configuration Release --no-restore
 
-      - name: Prepare output
+      - name: Package plugin
         run: |
           mkdir -p output
-          cp bin/Release/net*/NoQuestIcons.dll output/
+          # Try modern target frameworks, fallback to net472
+          cp bin/Release/net*/NoQuestIcons.dll output/ 2>/dev/null || cp bin/Release/net472/NoQuestIcons.dll output/
           cp NoQuestIcons.json output/
           cp pluginmaster.json output/
 
-      - name: Upload build artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: NoQuestIcons
           path: output/*
 
-      - name: Draft GitHub Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           draft: true
+          generate_release_notes: true
           files: output/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
