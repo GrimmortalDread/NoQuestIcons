@@ -1,16 +1,25 @@
 ﻿<Project Sdk="Dalamud.NET.Sdk/13.1.0">
-	<PropertyGroup>
-		<TargetFramework>net9.0-windows</TargetFramework>
-		<Platforms>x64</Platforms>
+  <PropertyGroup>
+    <!-- Target & output -->
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
-		<!-- CI: point SDK at dev hooks location set up by workflow -->
-		<DalamudSkipCopy>true</DalamudSkipCopy>
-		<DalamudLibPath>$(HOME)/.xlcore/dalamud/Hooks/dev</DalamudLibPath>
+    <!-- Names must match your plugin’s InternalName/assembly -->
+    <AssemblyName>NoQuestIcons</AssemblyName>
+    <RootNamespace>NoQuestIcons</RootNamespace>
 
-		<!-- Default version; the workflow overrides this with the tag -->
-		<Version Condition="'$(Version)' == ''">1.2.2</Version>
+    <!-- Pin to the latest working build for the DIP17 submission -->
+    <Version>1.2.8</Version>
 
-		<!-- IMPORTANT: tell DalamudPackager where the manifest is -->
-		<PluginManifest>manifest.json</PluginManifest>
-	</PropertyGroup>
+    <!-- Tell the SDK where your manifest is (same folder as this .csproj) -->
+    <PluginManifest>NoQuestIcons.json</PluginManifest>
+
+    <!-- Nice-to-haves -->
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
 </Project>

@@ -2,7 +2,7 @@
   "Author": "Grimmortal Dread",
   "Name": "No Quest Icons",
   "InternalName": "NoQuestIcons",
-  "AssemblyVersion": "1.0.0.0",
+  "AssemblyVersion": "1.2.8",
   "Description": "Removes quest icons from the UI.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
