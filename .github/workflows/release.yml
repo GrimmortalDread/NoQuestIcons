@@ -17,8 +17,9 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          clean: true
 
-      - name: Setup .NET (8 LTS runtime + 9 SDK)
+      - name: Setup .NET (LTS runtime + 9.0 SDK)
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
@@ -33,89 +34,61 @@ jobs:
           mkdir -p "$HOME/.xlcore/dalamud/Hooks/dev"
           curl -L https://goatcorp.github.io/dalamud-distrib/latest.zip -o dalamud.zip
           unzip -o dalamud.zip -d "$HOME/.xlcore/dalamud/Hooks/dev" >/dev/null
-          echo "Installed dev libs to $HOME/.xlcore/dalamud/Hooks/dev"
-
-      # ---------- GUARDRAILS ----------
-      - name: Guardrail — validate manifests and URLs
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          # Require jq for JSON checks
-          sudo apt-get update -y >/dev/null
-          sudo apt-get install -y jq >/dev/null
-
-          echo "Checking NoQuestIcons.json exists in repo root…"
-          test -f "NoQuestIcons.json" || { echo "::error::NoQuestIcons.json missing in repo root"; exit 1; }
-
-          echo "Validating NoQuestIcons.json structure…"
-          jq 'has("Name") and has("Author") and has("Punchline") and has("Description") and has("InternalName")' NoQuestIcons.json >/dev/null \
-            || { echo "::error::NoQuestIcons.json must contain Name, Author, Punchline, Description, InternalName"; exit 1; }
-
-          echo "Checking pluginmaster.json…"
-          test -f "pluginmaster.json" || { echo "::error::pluginmaster.json missing in repo root"; exit 1; }
-
-          # Must be an array of 1 object
-          LEN=$(jq 'length' pluginmaster.json)
-          [[ "$LEN" -eq 1 ]] || { echo "::error::pluginmaster.json must be a JSON array with exactly one entry"; exit 1; }
-
-          # Pull fields
-          INTERNAL=$(jq -r '.[0].InternalName' pluginmaster.json)
-          NAME=$(jq -r '.[0].Name' pluginmaster.json)
-          AV=$(jq -r '.[0].AssemblyVersion' pluginmaster.json)
-          ICON=$(jq -r '.[0].IconUrl' pluginmaster.json)
-          DLI=$(jq -r '.[0].DownloadLinkInstall // empty' pluginmaster.json)
-          DLU=$(jq -r '.[0].DownloadLinkUpdate // empty' pluginmaster.json)
-
-          echo "pluginmaster.json: InternalName=$INTERNAL, Name=$NAME, AssemblyVersion=$AV"
-          [[ "$INTERNAL" == "NoQuestIcons" ]] || { echo "::error::InternalName must be 'NoQuestIcons'"; exit 1; }
-
-          # We keep AssemblyVersion at 0.0.0 for automation; it will be bumped post-release
-          [[ "$AV" == "0.0.0" ]] || { echo "::error::AssemblyVersion in pluginmaster.json must be 0.0.0 (workflow bumps it after release)"; exit 1; }
-
-          # Icon must be reachable
-          if [[ -n "$ICON" && "$ICON" != "null" ]]; then
-            echo "HEAD-check IconUrl: $ICON"
-            curl -IfsS "$ICON" >/dev/null || { echo "::error::IconUrl not reachable: $ICON"; exit 1; }
-          else
-            echo "::warning::IconUrl is empty or null"
-          fi
-
-          # Enforce 'latest' links if provided (prevents per-tag edits)
-          WANT="https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll"
-          if [[ -n "$DLI" && "$DLI" != "$WANT" ]]; then
-            echo "::error::DownloadLinkInstall must be $WANT"; exit 1;
-          fi
-          if [[ -n "$DLU" && "$DLU" != "$WANT" ]]; then
-            echo "::error::DownloadLinkUpdate must be $WANT"; exit 1;
-          fi
-
-          echo "Guardrails OK ✅"
+          echo ">> Installed Dalamud dev libs to $HOME/.xlcore/dalamud/Hooks/dev"
 
       - name: Restore
         run: dotnet restore NoQuestIcons.csproj
 
       - name: Build
         env:
-          VERSION: ${{ github.ref_name }}  # e.g. v1.2.6
+          VERSION: ${{ github.ref_name }} # e.g. v1.2.5
         run: |
           set -euo pipefail
           VER="${VERSION#v}"
           echo "Building version: $VER"
-          dotnet build NoQuestIcons.csproj \
-            --configuration Release \
-            -p:Version="$VER" \
-            --no-restore
+          dotnet build NoQuestIcons.csproj --configuration Release --no-restore -p:Version="$VER"
+
+      - name: Guardrail: validate manifests and URLs (read-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -f "NoQuestIcons.json" || { echo "NoQuestIcons.json missing in repo root"; exit 1; }
+          jq -e 'has("Name") and has("Author") and has("InternalName") and has("Description")' NoQuestIcons.json >/dev/null || {
+            echo "NoQuestIcons.json is missing required fields"; exit 1; }
+
+          test -f "pluginmaster.json" || { echo "pluginmaster.json missing"; exit 1; }
+          jq -e '.[0].InternalName == "NoQuestIcons"' pluginmaster.json >/dev/null || {
+            echo "pluginmaster.json InternalName mismatch"; exit 1; }
+
+          # Require stable DLL URLs so latest always works
+          jq -e '.[0].DownloadLinkInstall=="https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll"' pluginmaster.json >/dev/null || {
+            echo "DownloadLinkInstall must be releases/latest/download/NoQuestIcons.dll"; exit 1; }
+          jq -e '.[0].DownloadLinkUpdate=="https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll"' pluginmaster.json >/dev/null || {
+            echo "DownloadLinkUpdate must be releases/latest/download/NoQuestIcons.dll"; exit 1; }
+
+          # Icon should be a raw URL
+          jq -r '.[0].IconUrl' pluginmaster.json | grep -E '^https://raw\.githubusercontent\.com/' >/dev/null || {
+            echo "IconUrl must be a raw.githubusercontent.com URL"; exit 1; }
 
       - name: Package outputs
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p output
-          cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll"
-          [ -f "bin/Release/NoQuestIcons.pdb" ] && cp "bin/Release/NoQuestIcons.pdb" output/
-          [ -f "NoQuestIcons.json" ] && cp "NoQuestIcons.json" output/
-          (cd output && zip -r "NoQuestIcons-${{ github.ref_name }}.zip" .)
+
+          # SDK drops directly into bin/Release
+          cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll" 
+
+          if [ -f "bin/Release/NoQuestIcons.pdb" ]; then
+            cp "bin/Release/NoQuestIcons.pdb" "output/NoQuestIcons.pdb"
+          fi
+
+          # Optional: include manifest in the zip (installer downloads the DLL from URLs)
+          cp "NoQuestIcons.json" "output/NoQuestIcons.json"
+
+          ZIP_NAME="NoQuestIcons-${{ github.ref_name }}.zip"
+          (cd output && zip -r "$ZIP_NAME" .)
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -135,26 +108,6 @@ jobs:
             output/NoQuestIcons.dll
             output/NoQuestIcons.pdb
             output/NoQuestIcons-${{ github.ref_name }}.zip
+            pluginmaster.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Bump AssemblyVersion in pluginmaster.json and push
-        if: success()
-        shell: bash
-        env:
-          VERSION: ${{ github.ref_name }}
-        run: |
-          set -euo pipefail
-          VER="${VERSION#v}"
-
-          # Only bump version; keep 'latest' URLs as-is
-          tmp=$(mktemp)
-          jq --arg v "$VER" '.[0].AssemblyVersion = $v' pluginmaster.json > "$tmp"
-          mv "$tmp" pluginmaster.json
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git pull --rebase
-          git add pluginmaster.json
-          git commit -m "chore: bump pluginmaster AssemblyVersion to $VER" || { echo "Nothing to commit"; exit 0; }
-          git push
