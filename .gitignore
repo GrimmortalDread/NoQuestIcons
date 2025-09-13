@@ -6,9 +6,6 @@ publish/
 *.exe
 *.pdb
 
-# Ignore NuGet package lock file
-packages.lock.json
-
 # User-specific files
 *.user
 *.suo
