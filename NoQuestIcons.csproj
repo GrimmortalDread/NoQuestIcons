@@ -1,25 +1,32 @@
 ﻿<Project Sdk="Dalamud.NET.Sdk/13.1.0">
-  <PropertyGroup>
-    <!-- Target & output -->
-    <TargetFramework>net9.0-windows</TargetFramework>
-    <Platforms>x64</Platforms>
-    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+	<PropertyGroup>
+		<!-- Target & output -->
+		<TargetFramework>net9.0-windows</TargetFramework>
+		<Platforms>x64</Platforms>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
-    <!-- Names must match your plugin’s InternalName/assembly -->
-    <AssemblyName>NoQuestIcons</AssemblyName>
-    <RootNamespace>NoQuestIcons</RootNamespace>
+		<!-- Names must match your plugin’s internal name/assembly -->
+		<AssemblyName>NoQuestIcons</AssemblyName>
+		<RootNamespace>NoQuestIcons</RootNamespace>
 
-    <!-- Pin to the latest working build for the DIP17 submission -->
-    <Version>1.2.8</Version>
+		<!-- Deterministic version; CI or DIP17 can override with -p:Version=... -->
+		<Version Condition="'$(Version)' == ''">1.2.8</Version>
 
-    <!-- Tell the SDK where your manifest is (same folder as this .csproj) -->
-    <PluginManifest>NoQuestIcons.json</PluginManifest>
+		<!-- REQUIRED: tell the SDK exactly which manifest file to use -->
+		<PluginManifest>NoQuestIcons.json</PluginManifest>
 
-    <!-- Nice-to-haves -->
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-    <Deterministic>true</Deterministic>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
+		<!-- REQUIRED FOR DIP17: commit packages.lock.json -->
+		<RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+
+		<!-- Helps both your CI and DIP17 find the dev hooks -->
+		<DalamudSkipCopy>true</DalamudSkipCopy>
+		<DalamudLibPath>$(HOME)/.xlcore/dalamud/Hooks/dev</DalamudLibPath>
+
+		<!-- Nice-to-haves -->
+		<Deterministic>true</Deterministic>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<LangVersion>latest</LangVersion>
+	</PropertyGroup>
 </Project>
+
