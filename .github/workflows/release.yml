@@ -11,7 +11,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,31 +43,32 @@ jobs:
         run: |
           VER="${VERSION#v}"
           echo "Building version: $VER"
-          dotnet build NoQuestIcons.csproj \
-            --configuration Release \
-            -p:Version="$VER" \
-            --no-restore
+          dotnet build NoQuestIcons.csproj --configuration Release --no-restore -p:Version="$VER"
 
-      - name: Package outputs
+      - name: Show build tree
+        run: |
+          echo "== ls -la =="
+          ls -la
+          echo "== bin/Release =="
+          ls -la bin/Release || true
+
+      - name: Package outputs (include manifest)
         run: |
           set -euo pipefail
           mkdir -p output
-
           cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll"
           if [ -f "bin/Release/NoQuestIcons.pdb" ]; then
             cp "bin/Release/NoQuestIcons.pdb" "output/NoQuestIcons.pdb"
           fi
+          cp "manifest.json" "output/manifest.json"
 
-          # Patch pluginmaster.json with correct version + URLs
-          VER="${GITHUB_REF_NAME#v}"
-          sed "s/0.0.0/$VER/" pluginmaster.json > output/pluginmaster.json
-          sed -i "s#\"DownloadLinkInstall\": \"\"#\"DownloadLinkInstall\": \"https://github.com/${{ github.repository }}/releases/download/v$VER/NoQuestIcons.dll\"#" output/pluginmaster.json
-          sed -i "s#\"DownloadLinkUpdate\": \"\"#\"DownloadLinkUpdate\": \"https://github.com/${{ github.repository }}/releases/download/v$VER/NoQuestIcons.dll\"#" output/pluginmaster.json
+          # Stable name for pluginmaster (latest)
+          (cd output && zip -r "NoQuestIcons.zip" .)
 
-          ZIP_NAME="NoQuestIcons-${GITHUB_REF_NAME}.zip"
-          (cd output && zip -r "$ZIP_NAME" .)
+          # Optional: versioned zip too
+          (cd output && zip -r "NoQuestIcons-${{ github.ref_name }}.zip" .)
 
-      - name: Upload artifact (CI archive)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: NoQuestIcons-${{ github.ref_name }}
@@ -85,7 +85,7 @@ jobs:
           files: |
             output/NoQuestIcons.dll
             output/NoQuestIcons.pdb
+            output/NoQuestIcons.zip
             output/NoQuestIcons-${{ github.ref_name }}.zip
-            output/pluginmaster.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

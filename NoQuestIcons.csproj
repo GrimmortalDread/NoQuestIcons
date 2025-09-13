@@ -3,14 +3,14 @@
 		<TargetFramework>net9.0-windows</TargetFramework>
 		<Platforms>x64</Platforms>
 
-		<!-- Make CI happy; we point the SDK at the dev hooks location explicitly in the workflow -->
+		<!-- CI: point SDK at dev hooks location set up by workflow -->
 		<DalamudSkipCopy>true</DalamudSkipCopy>
 		<DalamudLibPath>$(HOME)/.xlcore/dalamud/Hooks/dev</DalamudLibPath>
 
-		<!-- Default version; workflow will override with tag -->
+		<!-- Default version; the workflow overrides this with the tag -->
 		<Version Condition="'$(Version)' == ''">1.2.2</Version>
 
-		<!-- Tell DalamudPackager where the manifest is -->
-		<DalamudPluginManifest>$(MSBuildProjectDirectory)/NoQuestIcons.json</DalamudPluginManifest>
+		<!-- IMPORTANT: tell DalamudPackager where the manifest is -->
+		<PluginManifest>manifest.json</PluginManifest>
 	</PropertyGroup>
 </Project>
