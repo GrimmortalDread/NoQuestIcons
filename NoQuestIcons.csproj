@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Dalamud.NET.Sdk/13.1.0">
-	<PropertyGroup>
-		<TargetFramework>net9.0-windows</TargetFramework>
-		<Platforms>x64</Platforms>
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Platforms>x64</Platforms>
 
-		<!-- CI-friendly: we install dev hooks at $HOME/.xlcore/... in the workflow -->
-		<DalamudSkipCopy>true</DalamudSkipCopy>
-		<DalamudLibPath>$(HOME)/.xlcore/dalamud/Hooks/dev</DalamudLibPath>
+    <!-- CI config -->
+    <DalamudSkipCopy>true</DalamudSkipCopy>
+    <DalamudLibPath>$(HOME)/.xlcore/dalamud/Hooks/dev</DalamudLibPath>
 
-		<!-- Local default; the workflow overrides this with the tag's version -->
-		<Version Condition="'$(Version)' == ''">1.2.2</Version>
-	</PropertyGroup>
+    <!-- Default version; workflow overrides with tag (e.g., 1.2.4) -->
+    <Version Condition="'$(Version)' == ''">1.2.3</Version>
+  </PropertyGroup>
 </Project>

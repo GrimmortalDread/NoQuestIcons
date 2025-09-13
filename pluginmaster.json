@@ -1,14 +1,14 @@
 [
   {
     "Author": "GrimmortalDread",
-    "Name": "NoQuestIcons",
+    "Name": "No Quest Icons",
     "Punchline": "Removes quest icons from the UI for better immersion!",
     "Description": "Hides quest icons above NPCs' heads.",
     "InternalName": "NoQuestIcons",
     "AssemblyVersion": "0.0.0",
     "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
-    "DownloadLinkInstall": "https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll",
-    "DownloadLinkUpdate": "https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll",
+    "DownloadLinkInstall": "",
+    "DownloadLinkUpdate": "",
     "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/images/icons.png",
     "Tags": [ "UI", "QoL" ],
     "CategoryTags": [ "UI" ],
