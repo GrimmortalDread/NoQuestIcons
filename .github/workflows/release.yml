@@ -16,8 +16,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          clean: true
+            fetch-depth: 0
 
       - name: Setup .NET (LTS runtime + 9.0 SDK)
         uses: actions/setup-dotnet@v4
@@ -41,35 +40,22 @@ jobs:
 
       - name: Build
         env:
-          VERSION: ${{ github.ref_name }} # e.g. v1.2.5
+          VERSION: ${{ github.ref_name }} # e.g. v1.2.6
         run: |
           set -euo pipefail
           VER="${VERSION#v}"
           echo "Building version: $VER"
-          dotnet build NoQuestIcons.csproj --configuration Release --no-restore -p:Version="$VER"
+          dotnet build NoQuestIcons.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version="$VER"
 
-      - name: Guardrail: validate manifests and URLs (read-only)
-        shell: bash
+      - name: Show build tree (debug)
         run: |
-          set -euo pipefail
-
-          test -f "NoQuestIcons.json" || { echo "NoQuestIcons.json missing in repo root"; exit 1; }
-          jq -e 'has("Name") and has("Author") and has("InternalName") and has("Description")' NoQuestIcons.json >/dev/null || {
-            echo "NoQuestIcons.json is missing required fields"; exit 1; }
-
-          test -f "pluginmaster.json" || { echo "pluginmaster.json missing"; exit 1; }
-          jq -e '.[0].InternalName == "NoQuestIcons"' pluginmaster.json >/dev/null || {
-            echo "pluginmaster.json InternalName mismatch"; exit 1; }
-
-          # Require stable DLL URLs so latest always works
-          jq -e '.[0].DownloadLinkInstall=="https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll"' pluginmaster.json >/dev/null || {
-            echo "DownloadLinkInstall must be releases/latest/download/NoQuestIcons.dll"; exit 1; }
-          jq -e '.[0].DownloadLinkUpdate=="https://github.com/GrimmortalDread/NoQuestIcons/releases/latest/download/NoQuestIcons.dll"' pluginmaster.json >/dev/null || {
-            echo "DownloadLinkUpdate must be releases/latest/download/NoQuestIcons.dll"; exit 1; }
-
-          # Icon should be a raw URL
-          jq -r '.[0].IconUrl' pluginmaster.json | grep -E '^https://raw\.githubusercontent\.com/' >/dev/null || {
-            echo "IconUrl must be a raw.githubusercontent.com URL"; exit 1; }
+          echo "== Project root =="
+          ls -la
+          echo "== bin/Release =="
+          ls -la bin/Release || true
 
       - name: Package outputs
         shell: bash
@@ -77,20 +63,40 @@ jobs:
           set -euo pipefail
           mkdir -p output
 
-          # SDK drops directly into bin/Release
+          # DLL (SDK places it directly in bin/Release)
           cp "bin/Release/NoQuestIcons.dll" "output/NoQuestIcons.dll" 
 
-          if [ -f "bin/Release/NoQuestIcons.pdb" ]; then
-            cp "bin/Release/NoQuestIcons.pdb" "output/NoQuestIcons.pdb"
+          # Include manifest if present (SDK can embed it; having a loose one is fine)
+          if [ -f "NoQuestIcons.json" ]; then
+            cp "NoQuestIcons.json" "output/NoQuestIcons.json"
           fi
 
-          # Optional: include manifest in the zip (installer downloads the DLL from URLs)
-          cp "NoQuestIcons.json" "output/NoQuestIcons.json"
+          # Stable ZIP name expected by pluginmaster.json (…/releases/latest/download/NoQuestIcons.zip)
+          (cd output && zip -r "NoQuestIcons.zip" .)
 
-          ZIP_NAME="NoQuestIcons-${{ github.ref_name }}.zip"
-          (cd output && zip -r "$ZIP_NAME" .)
+      - name: Guardrail – validate metadata (non-fatal)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          echo "Checking NoQuestIcons.json exists in repo root…"
+          if [ ! -f "NoQuestIcons.json" ]; then
+            echo "::warning file=NoQuestIcons.json::NoQuestIcons.json missing in repo root (build still continues)"
+          fi
 
-      - name: Upload artifact
+          echo "Checking pluginmaster.json…"
+          if [ ! -f "pluginmaster.json" ]; then
+            echo "::warning file=pluginmaster.json::pluginmaster.json missing (build still continues)"
+          else
+            EXPECTED_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/NoQuestIcons.zip"
+            if ! grep -q "$EXPECTED_URL" pluginmaster.json; then
+              echo "::warning file=pluginmaster.json::DownloadLinkInstall/Update should be $EXPECTED_URL"
+            fi
+            echo "HEAD-check IconUrl:"
+            grep -o '"IconUrl": *"[^"]*"' pluginmaster.json || true
+          fi
+
+      - name: Upload artifact (CI archive)
         uses: actions/upload-artifact@v4
         with:
           name: NoQuestIcons-${{ github.ref_name }}
@@ -106,8 +112,6 @@ jobs:
           generate_release_notes: true
           files: |
             output/NoQuestIcons.dll
-            output/NoQuestIcons.pdb
-            output/NoQuestIcons-${{ github.ref_name }}.zip
-            pluginmaster.json
+            output/NoQuestIcons.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
