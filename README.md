@@ -1,4 +1,4 @@
-# NoQuestIcons
+# No Quest Icons
 
 ![Plugin Icon](images/icon.png)
 
