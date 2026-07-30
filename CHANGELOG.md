@@ -22,7 +22,9 @@ This project follows [Semantic Versioning](https://semver.org/).
 ### Changed
 
 * Updated to target Dalamud API 15 and .NET 10 (previously API 13 / .NET 9).
-* Reworked NPC nameplate icon suppression to bind directly to `INamePlateGui.OnDataUpdate` instead of `OnNamePlateUpdate`, fixing icon flicker.
+* Nameplate icon suppression continues to use reflection to bind to all compatible
+  `INamePlateGui` update events, ensuring the marker icon is cleared every frame
+  regardless of which specific event(s) the current Dalamud build exposes.
 
 ### Fixed
 
