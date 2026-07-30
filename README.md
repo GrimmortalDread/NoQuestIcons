@@ -15,7 +15,7 @@
    - Open Dalamud Settings → Experimental tab → Custom Plugin Repositories.
    - Add:
      ```
-     https://raw.githubusercontent.com/YourName/NoQuestIcons/main/pluginmaster.json
+     https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/pluginmaster.json
      ```
 2. Search for **NoQuestIcons** in the Plugin Installer and install it.
 
@@ -25,8 +25,9 @@
 - Advanced and About tabs provide extra options and info.
 
 ## 📚 Development
-This plugin is built against **Dalamud API 13.1.0**.  
-Clone the repo and build with Visual Studio 2022 or Rider.
+
+This plugin is built against **Dalamud API 15** (.NET 10).
+Clone the repo and build with Visual Studio 2026 or Rider.
 
 ## 📝 License
 This project is licensed under the [MIT License](LICENSE).
