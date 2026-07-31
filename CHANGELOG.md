@@ -17,6 +17,22 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 * (Put bug fixes here)
 
+## [1.4.0] - 2026-07-30
+
+### Changed
+
+* Replaced the reflection-based NamePlate event binding with explicit, statically
+  typed subscriptions to `INamePlateGui.OnDataUpdate`, `OnPostDataUpdate`,
+  `OnNamePlateUpdate`, and `OnPostNamePlateUpdate`. No behavior change for users,
+  but a significant internal rework, addressing prior code review feedback about
+  auditability.
+
+### Fixed
+
+* Nameplate marker icon flicker that occurred when binding to a single update
+  event alone, since the game resets the icon at multiple points in the
+  update cycle.
+
 ## [1.3.0] - 2026-07-30
 
 ### Changed
