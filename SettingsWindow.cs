@@ -48,7 +48,7 @@ internal sealed class SettingsWindow : Window
             if (ImGui.BeginTabItem("About"))
             {
                 ImGui.Text("NoQuestIcons Plugin");
-                ImGui.Text("Version 1.4.0");
+                ImGui.Text($"Version {typeof(Plugin).Assembly.GetName().Version?.ToString(3)}");
                 ImGui.Separator();
                 ImGui.TextWrapped("This plugin removes quest icons from NPC nameplates.\nPurely client-side, safe to use, no game files modified.");
                 ImGui.TextDisabled("Created for Dalamud API 15");
