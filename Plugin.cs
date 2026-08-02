@@ -38,24 +38,19 @@ public sealed class Plugin : IDalamudPlugin, IDisposable
         this.openConfigHandler = () => this.settings.IsOpen = true;
         PluginInterface.UiBuilder.OpenConfigUi += this.openConfigHandler;
 
-        // Subscribed to all four NamePlate update events (not just OnDataUpdate) because
-        // MarkerIconId is reset by the game at multiple points in the update cycle, and
-        // zeroing it from a single event was observed to still flicker. Hitting it on every
-        // available update/post-update pass closes that gap. This is intentionally explicit
-        // and typed rather than reflection-based, so it's easy to audit and doesn't depend on
-        // discovering event members at runtime.
+        // OnDataUpdate fires every frame for every visible nameplate, so it's the only
+        // subscription needed. OnNamePlateUpdate fires at the same point but only when a
+        // conditional internal flag is set, making it a subset of OnDataUpdate, and the
+        // "Post" variants fire after the nameplate has already been updated, which is too
+        // late to be useful here. The earlier flicker this plugin saw wasn't caused by
+        // missing update passes; it was MarkerIconId being cleared unconditionally for
+        // nameplate kinds it shouldn't have touched (see OnIconUpdate below).
         NamePlateGui.OnDataUpdate += this.OnIconUpdate;
-        NamePlateGui.OnPostDataUpdate += this.OnIconUpdate;
-        NamePlateGui.OnNamePlateUpdate += this.OnIconUpdate;
-        NamePlateGui.OnPostNamePlateUpdate += this.OnIconUpdate;
     }
 
     public void Dispose()
     {
         NamePlateGui.OnDataUpdate -= this.OnIconUpdate;
-        NamePlateGui.OnPostDataUpdate -= this.OnIconUpdate;
-        NamePlateGui.OnNamePlateUpdate -= this.OnIconUpdate;
-        NamePlateGui.OnPostNamePlateUpdate -= this.OnIconUpdate;
 
         PluginInterface.UiBuilder.Draw -= this.windowSystem.Draw;
         PluginInterface.UiBuilder.OpenConfigUi -= this.openConfigHandler;
@@ -78,8 +73,16 @@ public sealed class Plugin : IDalamudPlugin, IDisposable
 
         foreach (var handler in handlers)
         {
-            // MarkerIconId is the large icon above NPC heads used for quest availability
-            // (and a few other markers, like hunt/FATE indicators). Setting it to 0 disables it.
+            // MarkerIconId is the large icon above a nameplate and isn't exclusive to quest
+            // availability - it's also used for target markers (1, 2, 3, ...), hunt marks,
+            // and other indicators, so clearing it unconditionally stomps on those too.
+            // NamePlateKind.EventNpcCompanion covers EventNpc (quest givers, vendors, etc.)
+            // and Companion objects, which is the group quest icons actually render on, so
+            // gating on it here leaves markers on players, enemies, friendly battle NPCs,
+            // retainers, treasure, and gathering points untouched.
+            if (handler.NamePlateKind != NamePlateKind.EventNpcCompanion)
+                continue;
+
             handler.MarkerIconId = 0;
         }
     }

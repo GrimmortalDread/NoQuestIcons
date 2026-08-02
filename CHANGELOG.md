@@ -17,6 +17,26 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 * (Put bug fixes here)
 
+## [1.4.1] - 2026-08-02
+
+### Changed
+
+* Reduced `INamePlateGui` subscription from all four update events down to
+  `OnDataUpdate` alone. `OnNamePlateUpdate` fires at the same point as
+  `OnDataUpdate` but only conditionally, and the `Post` variants fire after
+  the nameplate has already been updated, so neither added coverage the
+  single subscription didn't already have.
+
+### Fixed
+
+* `MarkerIconId` was being cleared on every nameplate regardless of type,
+  which also wiped target markers (1, 2, 3, ...) and hunt marks on enemy
+  and friendly battle NPCs, since they share the same icon slot as quest
+  markers. Clearing is now scoped to `NamePlateKind.EventNpcCompanion`
+  (quest givers and companions), leaving markers on players, enemies,
+  friendly battle NPCs, retainers, treasure, and gathering points
+  untouched.
+
 ## [1.4.0] - 2026-07-30
 
 ### Changed
