@@ -35,7 +35,9 @@ This project follows [Semantic Versioning](https://semver.org/).
 * Advanced tab: category summary table with bulk hide/peek toggles, a
   full icon list with live icon previews, and Hide All / Show All / Enable
   Peek For All / Disable Peek For All buttons.
-
+* FATE participant NPCs (e.g. escort/protect targets) now get their own
+  category, with a confirmed starter entry from in-game testing.
+* Category dropdowns and the summary table are now sorted alphabetically.
 ### Changed
 
 * Settings window column widths are now measured at runtime instead of
