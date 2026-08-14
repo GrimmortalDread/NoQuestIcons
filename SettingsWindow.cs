@@ -7,6 +7,7 @@ using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Textures;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
+using Dalamud.Utility;
 
 namespace NoQuestIcons;
 
@@ -16,8 +17,8 @@ internal sealed class SettingsWindow : Window
     // left untouched, since each member's underlying numeric value is what's actually saved
     // in the player's config. Reordering the enum itself would silently reassign those
     // numbers and scramble everyone's already-categorized icons.
-    private static readonly IconCategory[] AssignableCategories = System.Enum.GetValues<IconCategory>()
-        .OrderBy(category => category.GetDisplayName(), System.StringComparer.OrdinalIgnoreCase)
+    private static readonly IconCategory[] AssignableCategories = Enum.GetValues<IconCategory>()
+        .OrderBy(category => category.GetDisplayName(), StringComparer.OrdinalIgnoreCase)
         .ToArray();
 
     private readonly PluginConfig config;
@@ -106,6 +107,8 @@ internal sealed class SettingsWindow : Window
 
             ImGui.EndTabBar();
         }
+
+        this.DrawFooter();
     }
 
     private void DrawPeekKeybind()
@@ -353,5 +356,30 @@ internal sealed class SettingsWindow : Window
 
             ImGui.EndTable();
         }
+    }
+
+    private void DrawFooter()
+    {
+        const string label = "Support on Ko-fi";
+        var textSize = ImGui.CalcTextSize(label);
+        var padding = ImGui.GetStyle().FramePadding;
+        var buttonSize = new Vector2(textSize.X + (padding.X * 2f), ImGui.GetFrameHeight());
+        var windowPadding = ImGui.GetStyle().WindowPadding;
+
+        // Pinned to the bottom-right corner of the window, independent of which tab is
+        // active or how tall its content is - same corner every time.
+        ImGui.SetCursorPos(new Vector2(
+            ImGui.GetWindowWidth() - buttonSize.X - windowPadding.X,
+            ImGui.GetWindowHeight() - buttonSize.Y - windowPadding.Y));
+
+        // Ko-fi's own brand color, so the button reads as "support link" at a glance.
+        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.369f, 0.357f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.45f, 0.44f, 1.0f));
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.85f, 0.28f, 0.27f, 1.0f));
+
+        if (ImGui.Button(label, buttonSize))
+            Util.OpenLink("https://ko-fi.com/grimmortaldread");
+
+        ImGui.PopStyleColor(3);
     }
 }
