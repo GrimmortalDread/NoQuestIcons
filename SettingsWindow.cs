@@ -12,7 +12,13 @@ namespace NoQuestIcons;
 
 internal sealed class SettingsWindow : Window
 {
-    private static readonly IconCategory[] AssignableCategories = Enum.GetValues<IconCategory>();
+    // Sorted alphabetically by display name for the UI - the enum's own declaration order is
+    // left untouched, since each member's underlying numeric value is what's actually saved
+    // in the player's config. Reordering the enum itself would silently reassign those
+    // numbers and scramble everyone's already-categorized icons.
+    private static readonly IconCategory[] AssignableCategories = System.Enum.GetValues<IconCategory>()
+        .OrderBy(category => category.GetDisplayName(), System.StringComparer.OrdinalIgnoreCase)
+        .ToArray();
 
     private readonly PluginConfig config;
     private readonly IKeyState keyState;

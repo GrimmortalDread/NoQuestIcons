@@ -35,6 +35,7 @@ public static class DefaultIconCategories
         [71353] = IconCategory.ClassJobQuest,  // Radovan
         [71222] = IconCategory.AlliedSociety,  // Tonaxia
         [71301] = IconCategory.TripleTriad,    // Gyuf Uin
+        [60093] = IconCategory.Fate,           // Vexed Researcher (Sheaves on the Wind FATE, Labyrinthos)
     };
 
     /// <summary>
