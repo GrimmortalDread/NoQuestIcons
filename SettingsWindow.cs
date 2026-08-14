@@ -30,6 +30,12 @@ internal sealed class SettingsWindow : Window
     public SettingsWindow(PluginConfig config, IKeyState keyState, ITextureProvider textureProvider)
         : base("NoQuestIcons Settings")
     {
+        // The Advanced tab's content scrolls within its own child region (see Draw()), so
+        // the outer window never needs a scrollbar of its own - without this, a tiny mismatch
+        // between the outer window's fixed height and its total content can make the outer
+        // window grow a second, mostly-nonfunctional scrollbar right next to the real one.
+        this.Flags = ImGuiWindowFlags.NoScrollbar;
+
         this.config = config;
         this.keyState = keyState;
         this.textureProvider = textureProvider;
@@ -67,15 +73,27 @@ internal sealed class SettingsWindow : Window
 
             if (ImGui.BeginTabItem("Advanced"))
             {
-                this.DrawPeekKeybind();
-                ImGui.Separator();
-                this.DrawToggleKeybind();
-                ImGui.Separator();
-                this.DrawQuickActions();
-                ImGui.Separator();
-                this.DrawCategorySummary();
-                ImGui.Separator();
-                this.DrawIconRules();
+                // One scroll region for the whole tab's content, rather than a separate one
+                // just for the icon table below - avoids two nested scrollbars fighting each
+                // other. The footer is drawn after EndChild(), outside this region, so it
+                // stays fixed in place instead of scrolling with everything else.
+                var footerReserve = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y;
+                var childHeight = MathF.Max(150f, ImGui.GetContentRegionAvail().Y - footerReserve);
+
+                if (ImGui.BeginChild("NoQuestIconsAdvancedScroll", new Vector2(0, childHeight)))
+                {
+                    this.DrawPeekKeybind();
+                    ImGui.Separator();
+                    this.DrawToggleKeybind();
+                    ImGui.Separator();
+                    this.DrawQuickActions();
+                    ImGui.Separator();
+                    this.DrawCategorySummary();
+                    ImGui.Separator();
+                    this.DrawIconRules();
+                }
+
+                ImGui.EndChild();
                 ImGui.EndTabItem();
             }
 
@@ -294,15 +312,7 @@ internal sealed class SettingsWindow : Window
         var hiddenWidth = MathF.Max(ImGui.CalcTextSize("Hidden").X, ImGui.GetFrameHeight()) + 20f;
         var peekWidth = MathF.Max(ImGui.CalcTextSize("Peek").X, ImGui.GetFrameHeight()) + 20f;
 
-        // A bounded height is required for ImGuiTableFlags.ScrollY to actually take effect -
-        // without one, the table just grows to fit every row, pushing the whole window's
-        // content past what's visible instead of scrolling internally. This uses whatever
-        // vertical space is left in the window, minus a bit of room reserved for the footer
-        // that's drawn after it.
-        var footerReserve = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y;
-        var tableHeight = MathF.Max(150f, ImGui.GetContentRegionAvail().Y - footerReserve);
-
-        if (ImGui.BeginTable("NoQuestIconsIconRules", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders | ImGuiTableFlags.ScrollY, new Vector2(0, tableHeight)))
+        if (ImGui.BeginTable("NoQuestIconsIconRules", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))
         {
             ImGui.TableSetupColumn("Icon", ImGuiTableColumnFlags.WidthFixed, iconSize + 16f);
             ImGui.TableSetupColumn("Icon ID", ImGuiTableColumnFlags.WidthFixed, iconIdWidth);
@@ -369,24 +379,30 @@ internal sealed class SettingsWindow : Window
     private void DrawFooter()
     {
         const string label = "Support on Ko-fi";
-        var textSize = ImGui.CalcTextSize(label);
-        var buttonWidth = textSize.X + (ImGui.GetStyle().FramePadding.X * 2f);
+        var buttonSize = new Vector2(
+            ImGui.CalcTextSize(label).X + (ImGui.GetStyle().FramePadding.X * 2f),
+            ImGui.GetFrameHeight());
 
         ImGui.Spacing();
         ImGui.Separator();
         ImGui.Spacing();
 
-        // Right-aligned on its own line, in the normal content flow - not an overlay pinned
-        // to raw window coordinates, so it scrolls with everything else instead of floating
-        // on top of it when a tab's content runs long.
-        ImGui.SetCursorPosX(ImGui.GetWindowWidth() - buttonWidth - ImGui.GetStyle().WindowPadding.X);
+        // Right-aligned using remaining content width (which already accounts for any
+        // active scrollbar or padding), rather than raw window width - avoids the button
+        // landing past the actual visible area regardless of how wide the window is.
+        var avail = ImGui.GetContentRegionAvail().X;
+        if (avail > buttonSize.X)
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + avail - buttonSize.X);
 
         // Ko-fi's own brand color, so the button reads as "support link" at a glance.
         ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.369f, 0.357f, 1.0f));
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.45f, 0.44f, 1.0f));
         ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.85f, 0.28f, 0.27f, 1.0f));
 
-        if (ImGui.Button(label))
+        // Explicitly sized to match buttonSize above, rather than letting ImGui compute its
+        // own size - otherwise a small mismatch between the two can clip the button's edge,
+        // independent of window size (so resizing the window wouldn't have fixed it).
+        if (ImGui.Button(label, buttonSize))
             Util.OpenLink("https://ko-fi.com/grimmortaldread");
 
         ImGui.PopStyleColor(3);
