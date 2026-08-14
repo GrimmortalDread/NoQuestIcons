@@ -4,6 +4,10 @@
 
 **No Quest Icons** is a [Dalamud](https://github.com/goatcorp/Dalamud) plugin for *Final Fantasy XIV* that completely removes the quest icons (diamonds, exclamation/question marks) above NPC nameplates.
 
+## ☕ Support
+
+Streamer, VOD creator, and Dalamud plugin dev. If you enjoy my content or my plugins (like this one), a coffee here is always appreciated: [ko-fi.com/grimmortaldread](https://ko-fi.com/grimmortaldread)
+
 ## ✨ Features
 - Hides quest icons from all NPC nameplates.
 - Works 100% client-side — no game files are modified.
