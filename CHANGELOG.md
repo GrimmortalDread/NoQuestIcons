@@ -17,6 +17,35 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 * (Put bug fixes here)
 
+## [1.5.0] - 2026-08-14
+
+### Added
+
+* Icons are now sorted into categories (Main Scenario, Feature Quest, Side
+  Story, Side Quest, Class/Job Quest, Allied Society, Guildleve, Triple
+  Triad, Seasonal Event, Other) as they're discovered, with a built-in
+  starter dataset so common quest types come pre-categorized without any
+  manual setup.
+* Peek key: hold to temporarily reveal hidden icons, configurable per
+  category or per individual icon.
+* Toggle key: press once to turn the whole plugin on or off without
+  opening the settings window.
+* `/noquesticons` and `/nqi` chat commands open the settings window;
+  accept `on`/`off` arguments to enable/disable directly.
+* Advanced tab: category summary table with bulk hide/peek toggles, a
+  full icon list with live icon previews, and Hide All / Show All / Enable
+  Peek For All / Disable Peek For All buttons.
+
+### Changed
+
+* Settings window column widths are now measured at runtime instead of
+  hardcoded, so they display correctly regardless of UI scale.
+
+### Fixed
+
+* Peek and toggle key state now update instantly instead of waiting on
+  character movement to take visible effect.
+
 ## [1.4.1] - 2026-08-02
 
 ### Changed
