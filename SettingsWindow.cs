@@ -5,6 +5,7 @@ using System.Numerics;
 using Dalamud.Bindings.ImGui;
 using Dalamud.Game.ClientState.Keys;
 using Dalamud.Interface.Textures;
+using Dalamud.Interface.Utility.Raii;
 using Dalamud.Interface.Windowing;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility;
@@ -56,74 +57,74 @@ internal sealed class SettingsWindow : Window
 
     public override void Draw()
     {
-        if (ImGui.BeginTabBar("NoQuestIconsTabs"))
+        using var tabBar = ImRaii.TabBar("NoQuestIconsTabs");
+        if (tabBar)
         {
-            if (ImGui.BeginTabItem("General"))
+            // Each tab below uses an explicit using (...) { } block, not a plain "using var"
+            // line - these three tabs are siblings in the same scope, so a plain "using var"
+            // wouldn't close one until the whole block ends, leaving all three open at once
+            // instead of each closing before the next begins.
+            using (var generalTab = ImRaii.TabItem("General"))
             {
-                var enabled = this.config.Enabled;
-                if (ImGui.Checkbox(" Hide quest icons on all nameplates", ref enabled))
+                if (generalTab)
                 {
-                    this.config.Enabled = enabled;
-                    this.config.Save();
-                }
+                    var enabled = this.config.Enabled;
+                    if (ImGui.Checkbox(" Hide quest icons on all nameplates", ref enabled))
+                    {
+                        this.config.Enabled = enabled;
+                        this.config.Save();
+                    }
 
-                ImGui.TextWrapped("This master switch controls every quest icon at once, overriding whatever's set per category. Use the Advanced tab to fine-tune which quest types are hidden.");
-                ImGui.EndTabItem();
+                    ImGui.TextWrapped("This master switch controls every quest icon at once, overriding whatever's set per category. Use the Advanced tab to fine-tune which quest types are hidden.");
+                }
             }
 
-            if (ImGui.BeginTabItem("Advanced"))
+            using (var advancedTab = ImRaii.TabItem("Advanced"))
             {
-                // One scroll region for the whole tab's content, rather than a separate one
-                // just for the icon table below - avoids two nested scrollbars fighting each
-                // other. The footer is drawn after EndChild(), outside this region, so it
-                // stays fixed in place instead of scrolling with everything else.
-                var footerReserve = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y;
-                var childHeight = MathF.Max(150f, ImGui.GetContentRegionAvail().Y - footerReserve);
-
-                if (ImGui.BeginChild("NoQuestIconsAdvancedScroll", new Vector2(0, childHeight)))
+                if (advancedTab)
                 {
-                    this.DrawPeekKeybind();
-                    ImGui.Separator();
-                    this.DrawToggleKeybind();
-                    ImGui.Separator();
-                    this.DrawQuickActions();
-                    ImGui.Separator();
-                    this.DrawCategorySummary();
-                    ImGui.Separator();
-                    this.DrawIconRules();
+                    // One scroll region for the whole tab's content, rather than a separate one
+                    // just for the icon table below - avoids two nested scrollbars fighting each
+                    // other. The footer is drawn after this child region closes, outside it, so
+                    // it stays fixed in place instead of scrolling with everything else.
+                    var footerReserve = ImGui.GetFrameHeightWithSpacing() + ImGui.GetStyle().ItemSpacing.Y;
+                    var childHeight = MathF.Max(150f, ImGui.GetContentRegionAvail().Y - footerReserve);
+
+                    using var scrollRegion = ImRaii.Child("NoQuestIconsAdvancedScroll", new Vector2(0, childHeight));
+                    if (scrollRegion)
+                    {
+                        this.DrawPeekKeybind();
+                        ImGui.Separator();
+                        this.DrawToggleKeybind();
+                        ImGui.Separator();
+                        this.DrawQuickActions();
+                        ImGui.Separator();
+                        this.DrawCategorySummary();
+                        ImGui.Separator();
+                        this.DrawIconRules();
+                    }
                 }
-
-                ImGui.EndChild();
-                ImGui.EndTabItem();
             }
 
-            if (ImGui.BeginTabItem("About"))
+            using (var aboutTab = ImRaii.TabItem("About"))
             {
-                ImGui.Text("NoQuestIcons");
-                ImGui.Text($"Version {typeof(Plugin).Assembly.GetName().Version?.ToString(3)}");
-                ImGui.Separator();
+                if (aboutTab)
+                {
+                    ImGui.Text("NoQuestIcons");
+                    ImGui.Text($"Version {typeof(Plugin).Assembly.GetName().Version?.ToString(3)}");
+                    ImGui.Separator();
 
-                ImGui.TextWrapped(
-                    "Hides the quest-availability icons that float above NPC nameplates - the " +
-                    "exclamation marks, question marks, and diamonds - without touching target " +
-                    "markers, hunt marks, or anything else that shares the same icon slot.");
+                    ImGui.TextWrapped(
+                        "Hides every quest icon above NPC nameplates. Icons are sortable and " +
+                        "hideable by quest type (Main Scenario, Side Quest, Guildleve, Class/Job " +
+                        "Quest, and more), with common types pre-categorized. Includes a peek key " +
+                        "to reveal hidden icons on demand and a separate toggle key to switch the " +
+                        "whole plugin on/off, both from the Advanced tab.");
 
-                ImGui.Spacing();
-                ImGui.TextWrapped(
-                    "Icons are sorted into categories (Main Scenario, Side Quest, Guildleve, " +
-                    "and more) automatically as you encounter them, with common quest types " +
-                    "pre-categorized out of the box. Bind a peek key to reveal hidden icons on " +
-                    "demand, and a separate toggle key to switch the whole plugin on or off - " +
-                    "both from the Advanced tab.");
-
-                ImGui.Spacing();
-                ImGui.TextDisabled("Purely client-side - no game files are modified.");
-                ImGui.TextDisabled("Built for Dalamud API 15.");
-
-                ImGui.EndTabItem();
+                    ImGui.Spacing();
+                    ImGui.TextDisabled("Built for Dalamud API 15.");
+                }
             }
-
-            ImGui.EndTabBar();
         }
 
         this.DrawFooter();
@@ -135,7 +136,9 @@ internal sealed class SettingsWindow : Window
 
         var currentLabel = this.config.PeekKey == VirtualKey.NO_KEY ? "Unbound" : this.config.PeekKey.GetFancyName();
         ImGui.SetNextItemWidth(220);
-        if (ImGui.BeginCombo("Peek key", currentLabel))
+
+        using var combo = ImRaii.Combo("Peek key", currentLabel);
+        if (combo)
         {
             if (ImGui.Selectable("Unbound", this.config.PeekKey == VirtualKey.NO_KEY))
             {
@@ -155,8 +158,6 @@ internal sealed class SettingsWindow : Window
                 if (selected)
                     ImGui.SetItemDefaultFocus();
             }
-
-            ImGui.EndCombo();
         }
     }
 
@@ -166,7 +167,9 @@ internal sealed class SettingsWindow : Window
 
         var currentLabel = this.config.ToggleKey == VirtualKey.NO_KEY ? "Unbound" : this.config.ToggleKey.GetFancyName();
         ImGui.SetNextItemWidth(220);
-        if (ImGui.BeginCombo("Toggle plugin key", currentLabel))
+
+        using var combo = ImRaii.Combo("Toggle plugin key", currentLabel);
+        if (combo)
         {
             if (ImGui.Selectable("Unbound", this.config.ToggleKey == VirtualKey.NO_KEY))
             {
@@ -186,8 +189,6 @@ internal sealed class SettingsWindow : Window
                 if (selected)
                     ImGui.SetItemDefaultFocus();
             }
-
-            ImGui.EndCombo();
         }
     }
 
@@ -238,7 +239,8 @@ internal sealed class SettingsWindow : Window
         var hiddenWidth = MathF.Max(ImGui.CalcTextSize("Hidden").X, ImGui.GetFrameHeight()) + 20f;
         var peekWidth = MathF.Max(ImGui.CalcTextSize("Peek").X, ImGui.GetFrameHeight()) + 20f;
 
-        if (ImGui.BeginTable("NoQuestIconsCategorySummary", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))
+        using var table = ImRaii.Table("NoQuestIconsCategorySummary", 4, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders);
+        if (table)
         {
             ImGui.TableSetupColumn("Category", ImGuiTableColumnFlags.WidthStretch);
             ImGui.TableSetupColumn("Icons found", ImGuiTableColumnFlags.WidthFixed, iconsFoundWidth);
@@ -254,7 +256,11 @@ internal sealed class SettingsWindow : Window
                 var rulesInCategory = this.config.IconRules.Values.Where(r => r.Category == category).ToArray();
 
                 ImGui.TableNextRow();
-                ImGui.PushID((int)category);
+
+                // Disposes at the end of this loop iteration, same as id below - each row
+                // gets its own unique tag and its own disabled-state, then both release
+                // automatically before the next row starts.
+                using var id = ImRaii.PushId((int)category);
 
                 ImGui.TableSetColumnIndex(0);
                 ImGui.TextUnformatted(category.GetDisplayName());
@@ -263,8 +269,7 @@ internal sealed class SettingsWindow : Window
                 ImGui.TextUnformatted(rulesInCategory.Length.ToString());
 
                 var hasIcons = rulesInCategory.Length > 0;
-                if (!hasIcons)
-                    ImGui.BeginDisabled();
+                using var disabled = ImRaii.Disabled(!hasIcons);
 
                 ImGui.TableSetColumnIndex(2);
                 var allHidden = hasIcons && rulesInCategory.All(r => r.Hidden);
@@ -283,14 +288,7 @@ internal sealed class SettingsWindow : Window
                         rule.PeekReveals = allPeek;
                     this.config.Save();
                 }
-
-                if (!hasIcons)
-                    ImGui.EndDisabled();
-
-                ImGui.PopID();
             }
-
-            ImGui.EndTable();
         }
     }
 
@@ -312,7 +310,8 @@ internal sealed class SettingsWindow : Window
         var hiddenWidth = MathF.Max(ImGui.CalcTextSize("Hidden").X, ImGui.GetFrameHeight()) + 20f;
         var peekWidth = MathF.Max(ImGui.CalcTextSize("Peek").X, ImGui.GetFrameHeight()) + 20f;
 
-        if (ImGui.BeginTable("NoQuestIconsIconRules", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))
+        using var table = ImRaii.Table("NoQuestIconsIconRules", 5, ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders);
+        if (table)
         {
             ImGui.TableSetupColumn("Icon", ImGuiTableColumnFlags.WidthFixed, iconSize + 16f);
             ImGui.TableSetupColumn("Icon ID", ImGuiTableColumnFlags.WidthFixed, iconIdWidth);
@@ -324,7 +323,7 @@ internal sealed class SettingsWindow : Window
             foreach (var (iconId, rule) in this.config.IconRules.OrderBy(entry => entry.Key))
             {
                 ImGui.TableNextRow();
-                ImGui.PushID(iconId);
+                using var id = ImRaii.PushId(iconId);
 
                 ImGui.TableSetColumnIndex(0);
                 var texture = this.textureProvider.GetFromGameIcon(new GameIconLookup((uint)iconId)).GetWrapOrEmpty();
@@ -335,7 +334,9 @@ internal sealed class SettingsWindow : Window
 
                 ImGui.TableSetColumnIndex(2);
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.BeginCombo("##Category", rule.Category.GetDisplayName()))
+
+                using var combo = ImRaii.Combo("##Category", rule.Category.GetDisplayName());
+                if (combo)
                 {
                     foreach (var category in AssignableCategories)
                     {
@@ -349,8 +350,6 @@ internal sealed class SettingsWindow : Window
                         if (selected)
                             ImGui.SetItemDefaultFocus();
                     }
-
-                    ImGui.EndCombo();
                 }
 
                 ImGui.TableSetColumnIndex(3);
@@ -368,11 +367,7 @@ internal sealed class SettingsWindow : Window
                     rule.PeekReveals = peekReveals;
                     this.config.Save();
                 }
-
-                ImGui.PopID();
             }
-
-            ImGui.EndTable();
         }
     }
 
@@ -394,17 +389,13 @@ internal sealed class SettingsWindow : Window
         if (avail > buttonSize.X)
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + avail - buttonSize.X);
 
-        // Ko-fi's own brand color, so the button reads as "support link" at a glance.
-        ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1.0f, 0.369f, 0.357f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.45f, 0.44f, 1.0f));
-        ImGui.PushStyleColor(ImGuiCol.ButtonActive, new Vector4(0.85f, 0.28f, 0.27f, 1.0f));
+        // Ko-fi's own brand color, so the button reads as "support link" at a glance. All
+        // three colors release automatically once this method returns.
+        using var buttonColor = ImRaii.PushColor(ImGuiCol.Button, new Vector4(1.0f, 0.369f, 0.357f, 1.0f));
+        using var hoveredColor = ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(1.0f, 0.45f, 0.44f, 1.0f));
+        using var activeColor = ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.85f, 0.28f, 0.27f, 1.0f));
 
-        // Explicitly sized to match buttonSize above, rather than letting ImGui compute its
-        // own size - otherwise a small mismatch between the two can clip the button's edge,
-        // independent of window size (so resizing the window wouldn't have fixed it).
         if (ImGui.Button(label, buttonSize))
             Util.OpenLink("https://ko-fi.com/grimmortaldread");
-
-        ImGui.PopStyleColor(3);
     }
 }

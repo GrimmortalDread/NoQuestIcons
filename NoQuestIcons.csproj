@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>NoQuestIcons</AssemblyName>
     <Version>1.5.0.0</Version>
-    <Description>Removes quest icons from the UI.</Description>
+    <Description>Hides every quest icon above NPCs nameplates. Icons are sortable and hideable by quest type (Main Scenario, Side Quest, Guildleve, Class/Job Quest, and more), with common types pre-categorized. Includes a peek key to reveal hidden icons on demand and a separate toggle key to switch the whole plugin on/off.</Description>
   </PropertyGroup>
 
 </Project>

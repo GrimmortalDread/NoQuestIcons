@@ -3,7 +3,7 @@
   "Name": "No Quest Icons",
   "InternalName": "NoQuestIcons",
   "AssemblyVersion": "1.5.0.0",
-  "Description": "Removes the exclamation/question-mark and diamond icons above quest-giver nameplates, without touching target markers or hunt marks. Icons are auto-sorted by quest type (Main Scenario, Side Quest, Guildleve, Class/Job Quest, and more), with common types pre-categorized out of the box. Includes a peek key to reveal hidden icons on demand and a separate toggle key to switch the whole plugin on/off.",
+  "Description": "Hides every quest icon above NPC nameplates. Icons are sortable and hideable by quest type (Main Scenario, Side Quest, Guildleve, Class/Job Quest, and more), with common types pre-categorized. Includes a peek key to reveal hidden icons on demand and a separate toggle key to switch the whole plugin on/off.",
   "ApplicableVersion": "any",
   "RepoUrl": "https://github.com/GrimmortalDread/NoQuestIcons",
   "Tags": [
@@ -17,6 +17,6 @@
   "CanUnloadAsync": false,
   "LoadPriority": 0,
   "IconUrl": "https://raw.githubusercontent.com/GrimmortalDread/NoQuestIcons/main/images/icon.png",
-  "Punchline": "Hides quest icons above NPCs, sorted by type, with peek and toggle hotkeys.",
+  "Punchline": "Hides every quest icon above NPC nameplates, sortable by type, with peek and toggle hotkeys.",
   "AcceptsFeedback": true
 }
