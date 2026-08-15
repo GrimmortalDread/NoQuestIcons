@@ -17,6 +17,19 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 * (Put bug fixes here)
 
+## [1.5.1] - 2026-08-14
+
+### Changed
+
+* Converted every ImGui `Begin`/`End` and `Push`/`Pop` pair (tabs, tables,
+  combos, child windows, IDs, disabled state, style colors) to `ImRaii`,
+  per review feedback. Ties cleanup to C#'s `using` scope instead of a
+  manually-written matching call, so a future early return or exception
+  can't leave ImGui's internal state corrupted by a skipped `End`/`Pop`.
+* Synced plugin description text across the installer punchline, the
+  detailed description, and the in-game About tab, so all three describe
+  the plugin consistently at different levels of detail.
+
 ## [1.4.0] - 2026-07-30
 
 ### Changed
